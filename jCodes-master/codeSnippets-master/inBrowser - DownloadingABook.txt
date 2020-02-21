@@ -1,0 +1,24 @@
+var script = document.createElement('script');
+script.type = 'text/javascript';
+script.src = 'https://unpkg.com/jspdf@latest/dist/jspdf.min.js';
+document.head.appendChild(script);
+
+var doc = new jsPDF('l');
+var totalPages = 75;
+var pages = Array.apply(null, {length: totalPages}).map(Number.call, Number).map(x => x + 1);
+$('#viewerContainer').scroll(function() {
+  var page = pages[0];
+  var canvasID = '#page' + page;
+    
+  if($( canvasID ).length){
+    var imgData = $(canvasID)[0].toDataURL('image/png', 1.0);
+    if(imgData.length > 20000){
+      doc.addImage(imgData, 'PNG', 0, 0);
+      doc.addPage();
+      console.log(canvasID + ' is added, removing ' + canvasID); 
+      pages.shift();
+    }
+  }
+});
+
+doc.save("download.pdf");

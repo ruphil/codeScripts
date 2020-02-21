@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      h1{
+        font-size: 700%;
+      }
+      .data {
+        display: inline-block;
+        color: white;
+        margin: 10px;
+        padding: 10px;
+        font-size: 400%;
+      }
+      .accuracy, .iteration {
+        display: inline-block;
+        color: white;
+        margin: 10px;
+        padding: 10px;
+        font-size: 200%;
+      }
+    </style>
+  </head>
+  <body bgcolor='darkblue'>
+  <h1 align="center" style="color:white;">Location Logger</h1>
+  <div style="color: white;text-align:center;border:1px solid white;min-height: 30px;width:50%; margin:0 auto;" id="iteration"></div><br/>
+  <div style="color: white;text-align:center;min-height: 30px;width:50%; margin:0 auto;"><span class='accuracy'>Target Accuracy (m): </span><input type='text' style="font-size:200%;" onChange="startGettingLocationAgain()" id='targetAccuracy' value="20" placeholder='Target Accuracy (m)'/></div><br/>
+  <div style="color: white;text-align:center;border:1px solid white;min-height: 30px;width:50%; margin:0 auto;" id="accuracy"></div><br/>
+  <div style="color: white;text-align:center;border:1px solid white;min-height: 30px;width:50%; margin:0 auto;" id="location"></div><br/><br/><br/><br/>
+  <div style="color:white;text-align:center;width:50%; margin:0 auto;"><input type="text" id="placeLabel" style="font-size:200%;" placeholder="Place Label" /></div><br/><br/>
+  <div style="display:none;color:white;text-align:center;" id="status">Done</div><br/>
+  <div style="text-align:center"><input style="color:blue;font-size:200%;" type="button" onClick="pushData()" value="Push Location"/></div><br/>
+  
+  <div id="latitude" style="display: none;"></div>
+  <div id="longitude" style="display: none;"></div>
+  <div id="accuracyData" style="display: none;"></div>
+  <div id="timeStamp" style="display: none;"></div>
+  
+  <script>
+    var iteration = 0;
+    function processLocation(position){
+      document.getElementById('iteration').innerHTML = "<span class='iteration'>Iteration: " + iteration + "</span>";
+      document.getElementById('accuracy').innerHTML = "<span class='accuracy'>Accuracy: " + position.coords.accuracy + " m</span>";
+      var targetAccuracy = document.getElementById('targetAccuracy').value;
+      if (position.coords.accuracy > targetAccuracy) {
+        getLocation();
+      }
+      iteration++;
+      setValues(position);
+    }
+    
+    function getLocation(){
+      navigator.geolocation.getCurrentPosition(processLocation, function () {}, {enableHighAccuracy: true});
+    }
+    
+    function startGettingLocationAgain(){
+      iteration = 0;
+      getLocation();
+    }
+    
+    getLocation();
+    
+    function setValues(position){
+      document.getElementById('accuracy').innerHTML = "<span class='accuracy'>Accuracy: " + position.coords.accuracy + " m</span>";
+      document.getElementById('latitude').innerText = position.coords.latitude;
+      document.getElementById('longitude').innerText = position.coords.longitude;
+      document.getElementById('accuracyData').innerText = position.coords.accuracy;
+      document.getElementById('timeStamp').innerText = new Date(position.timestamp);
+      document.getElementById('location').innerHTML = "<span class='data'>" + position.coords.latitude + ", " + position.coords.longitude + "<br/><br/>" + new Date(position.timestamp) + "</span>";
+    }
+  
+    function pushData(){
+      var lat = document.getElementById('latitude').innerText;
+      var lon = document.getElementById('longitude').innerText;
+      var acc = document.getElementById('accuracyData').innerText;
+      var tym = document.getElementById('timeStamp').innerText;
+      var placeLabel = document.getElementById('placeLabel').value;
+      google.script.run.pushData([tym,lat,lon,acc,placeLabel]);
+      document.getElementById('status').style.display = "inherit";
+      setTimeout(function(){
+        document.getElementById('status').style.display = "none";
+      }, 1000);
+    }
+  </script>
+  
+  </body>
+</html>
+
+

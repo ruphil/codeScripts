@@ -1,0 +1,133 @@
+<head>
+<title>Civil Services V2</title>
+<style>
+.description{
+  font-size:50%;
+}
+.subcat{
+  font-size:70%;
+}
+.links{
+  font-size:60%;
+}
+a:visited { color:rgb(0, 0, 238); }
+</style>
+</head>
+
+<body>
+<h2>Civil Services Preparation</h2>
+
+<span>Affairs Date</span> <input type="date" id="affairDate"> <input type="button" value="Fetch" onclick="fetchIt()">
+<br/>
+<span style="font-size:70%;">Download Directly</span><input type="checkbox" id="drctDwnld">
+<table border="1" style="border-collapse: collapse;border-spacing: 0;font-size:80%">
+
+<tr><td><b>Daily Content</b></td><td colspan="3"></td></tr>
+<tr><td align="center">1</td><td colspan="2">Daily Affairs<br/>
+<p class="description">It consists of the following:<br/>
+(i) Daily Main Test Series<br/>
+(ii) Daily Prelims Test Series<br/>
+(iii) Daily Current Affairs<br/></p></td>
+<td id="dailyAffairs" align="center" valign="middle"></td></tr>
+
+<tr><td align="center">2</td><td colspan="2">Hindu Newspaper</td><td align="center" valign="middle"><p id="hinduPaperOne"></p><p id="hinduPaperTwo"></p></td></tr>
+
+<tr><td colspan="4" height="5vh"></td></tr>
+<tr><td><b>Monthly Content</b></td><td colspan="3"></td></tr>
+<tr><td align="center">1</td><td colspan="2">Monthly Magazine<br/>
+<p class="description">IASBaba's Monthly Magazine PDF</p>
+</td><td id="monthlyMags" align="center" valign="middle"></td></tr>
+<tr><td align="center">2</td><td colspan="2">Monthly Storming<br/>
+<p class="description">IASParliaments's Prelims and Mains Storming PDF</p>
+</td><td id="monthlyStorming" align="center" valign="middle"></td></tr>
+</table>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+const monthNames = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function doAJAXPostRequest(url, params, callback){
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('POST', url, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            callback(this.responseText);
+        }
+    };
+    xhttp.send(params);
+}
+
+
+function showLinks(data){
+    jsonParsedData = JSON.parse(data);
+    var files = jsonParsedData.files;
+
+    var date = document.getElementById("affairDate").valueAsDate;
+    var dateArr = [parseInt(date.getFullYear()), parseInt(date.getMonth()), parseInt(date.getDate())];
+    var hinduPaper2TodaysDate = new Date(dateArr[0], dateArr[1], dateArr[2]);
+    hinduPaper2TodaysDate.setDate(hinduPaper2TodaysDate.getDate() + 1);
+
+    var dailyAffairs = dateArr[0].toString() + ("0" + (dateArr[1] + 1).toString()).slice(-2) + ("0" + dateArr[2].toString()).slice(-2) + " dailyAffairs.pdf";
+    var hinduPaper1 = dateArr[0].toString() + ("0" + (dateArr[1] + 1).toString()).slice(-2) + ("0" + dateArr[2].toString()).slice(-2) + " hinduPaper.pdf";
+    var hinduPaper2 = hinduPaper2TodaysDate.getFullYear().toString() + ("0" + (hinduPaper2TodaysDate.getMonth() + 1).toString()).slice(-2) + ("0" + (hinduPaper2TodaysDate.getDate()).toString()).slice(-2) + " hinduPaper.pdf";
+    // console.log([dailyAffairs,hinduPaper1,hinduPaper2]);
+
+    var previousMonth = new Date(dateArr[0], dateArr[1], dateArr[2]);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+
+    var monthlyMags = (previousMonth.getFullYear()).toString() + ("0" + (previousMonth.getMonth() + 1).toString()).slice(-2) + "dd monthlyMags.pdf";
+    var monthlyStorming = (previousMonth.getFullYear()).toString() + ("0" + (previousMonth.getMonth() + 1).toString()).slice(-2) + "dd monthlyStorming.pdf";
+
+    var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+    var sections = [dailyAffairs, hinduPaper1, hinduPaper2, monthlyMags, monthlyStorming];
+
+    //console.log(sections);
+    //console.log(files);
+
+    for (var i = 0; i < files.length; i++){
+        for (var j = 0; j < sections.length; j++){
+            // console.log(files[i][0], sections[j]);
+            if(files[i][0] == sections[j]){
+                document.getElementById(loadingIDs[j]).innerHTML = "<a class='getID' href='#' fileName='" + sections[j] + "'>" + "<p class='links'>" + sections[j] + "</p>" + "</a>";
+                break;
+            } else {
+                document.getElementById(loadingIDs[j]).innerHTML = "Not Available";
+            }
+        }        
+    }
+
+    $('.getID').click(function(){
+        if(document.getElementById('drctDwnld').checked){
+            window.location.href = location.origin + "/fetchfile?filename="  + $(this).attr('fileName') + "&mode=attachment";
+        } else {
+            window.open(location.origin + "/fetchfile?filename="  + $(this).attr('fileName') + "&mode=inline",'_blank');
+        }
+    });
+
+}
+
+function getFilesAvailable(){
+    var fullURL = location.origin + "/filehandlercs";
+    var params = "mode=listfiles";
+    doAJAXPostRequest(fullURL, params, showLinks);
+}
+
+function showLoading(){
+  var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+  for (var i = 0; i < loadingIDs.length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = "Loading...";
+  }
+  getFilesAvailable();
+}
+
+window.onload = function () {
+  var sterday = new Date();
+  sterday.setDate(sterday.getDate() - 1);
+  document.getElementById("affairDate").valueAsDate = sterday;
+  showLoading();
+}
+</script>
+</body>

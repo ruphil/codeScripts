@@ -1,0 +1,8 @@
+square #
+	# -> number
+
+printseq #
+	# -> number
+
+ipath listsymbols source
+	source -> nse, gdrive, mysql

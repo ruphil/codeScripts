@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var map;
+      var kmlsrc = "https://raw.githubusercontent.com/ruphil/nJSProjects1/master/downloadingGoogleMaps/boundary.kml";
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 12.958876, lng: 77.526855},
+          
+          styles: [
+            {
+              "featureType": "all",
+              "stylers": [
+                { "visibility": "off" }
+              ]
+            },
+            {
+              "featureType": "landscape",
+              "elementType": "geometry",
+              "stylers": [
+                { "visibility": "on" }
+              ]
+            },
+            {
+              "featureType": "road",
+              "elementType": "geometry.stroke",
+              "stylers": [
+                { "visibility": "on" }
+              ]
+            }
+          ]
+        });
+
+        var kmlLayer = new google.maps.KmlLayer(kmlsrc, {
+          suppressInfoWindows: true,
+          preserveViewport: false,
+          map: map
+        });
+
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=&callback=initMap"
+    async defer></script>
+    
+    <script>
+      var socket = io();
+      function isEventInElement(event, element)   {
+          var rect = element.getBoundingClientRect();
+          var x = event.clientX;
+          if (x < rect.left || x >= rect.right) return false;
+          var y = event.clientY;
+          if (y < rect.top || y >= rect.bottom) return false;
+          return true;
+      }
+
+      function _arrayBufferToBase64( buffer ) {
+        var binary = '';
+        var bytes = new Uint8Array( buffer );
+        var len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+            binary += String.fromCharCode( bytes[ i ] );
+        }
+        return window.btoa( binary );
+      }
+
+      $("body").mouseup(function(){
+        var allImgs = $('img');
+        allImgs.css("border","2px solid blue");
+        
+        var secondImg = false;
+        allImgs.each(function( index ) {
+          if(isEventInElement(event, this)){
+            if(secondImg == true){
+              // console.log(event.clientX, event.clientY);
+              // console.log(this.getBoundingClientRect());
+              $(this).css("border","6px solid green");
+
+              if(event.shiftKey){
+                alert($(this).prop('title'));
+              }
+
+              if (event.ctrlKey) {
+
+                var tileRow = sessionStorage.getItem("tileRow");
+                var tileColumn = sessionStorage.getItem("tileColumn");
+
+                if (tileRow == null || tileColumn == null){
+                  tileRow = 1;
+                  tileColumn = 1;
+                }
+
+                imgIdSession = tileRow + " " + tileColumn;
+
+                var imgID = prompt("Please enter Image Id", imgIdSession);
+
+                if(imgID != "" && imgID != null){
+                  var imgURL = this.src;
+
+                  var xhttp = new XMLHttpRequest();
+                  xhttp.onreadystatechange = function() {
+                      if (this.readyState == 4 && this.status == 200) {
+                        var imgArryBuffer = this.response;
+
+                        console.log(imgArryBuffer);
+                        var imgData = [imgID, imgArryBuffer];
+                        socket.emit('imgData', imgData);
+                      }
+                  };
+
+                  xhttp.open("GET", imgURL, true);
+                  xhttp.responseType = 'arraybuffer';
+                  xhttp.send();
+
+                  var imgIDArry = imgID.split(" ");
+                
+                  var imgRow = imgIDArry[0];
+                  var imgColumn = imgIDArry[1];
+
+                  $(this).prop('title', `row: ${imgRow}, column: ${imgColumn}`);
+
+                  if (imgRow % 2 != 0){
+                    imgColumn = parseInt(imgIDArry[1]) + 1;
+                  } else {
+                    imgColumn = parseInt(imgIDArry[1]) - 1;
+                  }
+
+                  sessionStorage.setItem("tileRow", imgRow);
+                  sessionStorage.setItem("tileColumn", imgColumn);
+                }
+              }
+            }
+            secondImg = true;
+          }
+          
+        });
+
+      });
+    </script>
+
+    <script>
+      
+    </script>
+  </body>
+</html>

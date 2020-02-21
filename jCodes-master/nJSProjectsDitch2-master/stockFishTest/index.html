@@ -1,0 +1,18 @@
+<html>
+<head>
+    <title>Jack</title>
+</head>
+<body>
+<script src="./stockfish.js"></script>
+<script>
+    var stockfish = new Worker("stockfish.js");
+
+    stockfish.onmessage = function onmessage(event) {
+        console.log(event.data);
+    };
+    
+    stockfish.postMessage("ucinewgame");
+    stockfish.postMessage("isready");
+</script>
+</body>
+</html>

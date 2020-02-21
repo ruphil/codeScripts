@@ -1,0 +1,77 @@
+<body>
+<h1 align="center">Understand Quickly</h1>
+<table border="1" cellpadding="10" style="border-collapse: collapse;width: 100%">
+<colgroup>
+  <col span="1" style="width: 50%;"/>
+  <col span="1" style="width: 50%;"/>
+</colgroup>
+
+<tbody>
+<tr><td valign="top">
+
+Today's Personality Name: <strong><?= name ?></strong> <br/><br/>
+<img src="data:image/jpg;base64,<?= photo ?>" alt="thefamousperson" /><br/>
+<div id="information">
+<?
+
+var sections = info.split('||||');
+var quickfacts = sections[0].split('||'); ?>
+<p><strong><?= quickfacts[0] ?></strong></p>
+<? 
+var quick_sections = quickfacts[1].split('\n');
+for (var i = 0; i < quick_sections.length; i++) {
+?>
+  <?= quick_sections[i] ?><br/>
+<? } ?>
+
+
+<?
+for (var i = 1; i < sections.length; i++) {
+  var subsections = sections[i].split('||');
+  for (var j = 0; j < subsections.length; j++){
+    if (j == 0) { ?>
+  <p><strong><?= subsections[j] ?></strong></p>
+  <? } else { ?>
+  <p style="text-align: justify;"><?= subsections[j] ?></p>
+<? }}} ?>
+ </div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+$(document).ready(function() { 
+  console.log(2);
+  var txt = $('#information').html();
+//  console.log(txt);
+  
+  var reg_exp = /[^a-zA-Z0-9 .,:"?!@#$%^&*()-=_+<\/>]/gi
+  var re = new RegExp(reg_exp);
+  txt = txt.replace(re, '');
+  $('#information').html(txt);
+});
+</script>
+
+</td>
+<td valign="top">
+
+<strong>Book Title: <?= raw_row[0][0] ?></strong><br/>
+<strong>Story Title: <?= raw_row[0][1] ?></strong><br/><br/>
+<strong>Story: </strong><br/>
+<div style="line-height: 150%;">
+<? var paras = raw_row[0][2].split("।।")
+for (var i = 0;i < paras.length - 1; i++){ ?>
+    <p>&emsp;&emsp;<?= paras[i] ?><span>।</span></p>
+<? } ?>
+</div>
+<strong>An Humble Attempt made by Google Translate:</strong><br/>
+
+<? 
+var each_wrd_paras = each_wrd_trans_paras.split("।।")
+var full_paras = full_trans_paras.split("।।")
+for (var i = 0;i < each_wrd_paras.length - 1; i++){ ?>
+    <p>&emsp;&emsp;<?= each_wrd_paras[i] ?></p>
+    <p>&emsp;&emsp;<?= full_paras[i] ?></p>
+<? } ?>
+
+</td></tr>
+</tbody>
+</table>
+</body>

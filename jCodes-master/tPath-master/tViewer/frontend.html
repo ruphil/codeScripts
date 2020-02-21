@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      .dataLoaders, .viewChart, .dataFeatures{
+        text-align:center;
+      }
+      
+      .theCharts{
+        text-align:-webkit-center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>&emsp;&emsp;tViewer</h1>
+    <div id='storeDuration' style='display:none'></div>
+    
+    <div class="dataLoaders">
+      <input onClick='loadSymbols()' type='button' value='Load Symbols'/>&emsp;
+      <select id='symbols' onChange="selectChanged()"></select>&emsp;
+      <span id='currentSymNo'></span>
+      <span id='totalSyms'></span>&emsp;
+      <input onClick="loadData()" type='button' value='Load Data'/>
+    </div><br/>
+    
+    <div class="dataFeatures">
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Open Price"><span>Open Price</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="High Price"><span>High Price</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Low Price"><span>Low Price</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Close Price"><span>Close Price</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Last Price"><span>Last Price</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Traded Qty"><span>Traded Qty</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Traded Value"><span>Traded Value</span>&emsp;
+        <input type="checkbox" onclick="checkFeaturesNDraw()" name="Total Trades"><span>Total Trades</span>&emsp;
+    </div><br/>
+    
+    <div class="viewChart">
+      <input onClick="setDurationNDraw('1W')" type='button' value='1 Week'/>&emsp;
+      <input onClick="setDurationNDraw('1M')" type='button' value='1 Month'/>&emsp;
+      <input onClick="setDurationNDraw('1Y')" type='button' value='1 Year'/>&emsp;
+      <input onClick="setDurationNDraw('5Y')" type='button' value='5 Years'/>&emsp;
+      <input onClick="setDurationNDraw('all')" type='button' value='All'/>
+    </div>
+    
+    <div id="theChart" style="width: 100%; height: 500px"></div>
+    
+    
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      sessionStorage.setItem("chartModulesLoaded", "notLoaded");
+      
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(function() { sessionStorage.setItem("chartModulesLoaded", "loaded"); });
+      
+      function onlyUnique(value, index, self) { 
+        return self.indexOf(value) === index;
+      }
+
+      function addOptions(data){
+        sessionStorage.setItem("symbolsCache", JSON.stringify(data));
+        sessionStorage.setItem("symbolsCacheLoaded", "loaded");
+        
+        var symbols = [];
+        for (var i=0; i < data.length; i++){
+          for (var j=0; j < data[i].length; j++){
+            symbols.push(data[i][j][0]);
+          }
+        }
+        var symbols = symbols.filter(onlyUnique);
+        symbols.sort();
+//        console.log(symbols);
+        
+        var numSymbols = symbols.length;
+        document.getElementById('totalSyms').innerText = numSymbols;
+        
+        var selectElement = document.getElementById('symbols');
+        for (var k=0; k < numSymbols; k++){
+          var opt = document.createElement('option');
+          opt.value = k;
+          opt.innerHTML = symbols[k];
+          selectElement.appendChild(opt);
+        }
+        selectChanged();
+      }
+    
+      function loadSymbols(){
+        document.getElementById('symbols').innerHTML = "";
+        if(sessionStorage.getItem("symbolsCacheLoaded") == "loaded"){
+          var dataJSON = sessionStorage.getItem("symbolsCache");
+          var data = JSON.parse(dataJSON);
+          addOptions(data);
+          console.log("symbolsLoaded from cache");
+        } else {
+          google.script.run.withSuccessHandler(addOptions).getSymbols();
+        }
+        
+        if(sessionStorage.getItem("dataMainCacheLoaded") == "loaded"){
+          var selectElement = document.getElementById('symbols');
+          var loadedSymbolIndex = parseInt(sessionStorage.getItem("loadedSymbolIndex")) - 1;
+          selectElement.options[loadedSymbolIndex].selected=true;
+          console.log("symbol set to Available Data");
+          selectChanged();
+        }
+      }
+      
+      function selectChanged(){
+        var selectElement = document.getElementById('symbols');
+        var currentNo = parseInt(selectElement.options[selectElement.selectedIndex].value) + 1;
+        document.getElementById('currentSymNo').innerHTML = 'SymbolNo: ' + currentNo + ' of ';
+      }
+      
+      function setDataToSession(data, symbol){
+        var selectElement = document.getElementById('symbols');
+        var currentNo = parseInt(selectElement.options[selectElement.selectedIndex].value) + 1;
+        
+        sessionStorage.setItem("loadedSymbol", symbol);
+        sessionStorage.setItem("loadedSymbolIndex", currentNo);
+        sessionStorage.setItem("symbolData", JSON.stringify(data));
+        sessionStorage.setItem("dataMainCacheLoaded", "loaded");
+      }
+      
+      function loadData(){
+        var selectElement = document.getElementById('symbols');
+        var symbol = selectElement.options[selectElement.selectedIndex].innerHTML;
+        
+        if(sessionStorage.getItem("dataMainCacheLoaded") == "loaded" && sessionStorage.getItem("loadedSymbol") == symbol){
+          var symbolData = JSON.parse(sessionStorage.getItem("symbolData"));
+          console.log("dataLoaded from cache");
+        } else{
+          google.script.run.withSuccessHandler(setDataToSession).withUserObject(symbol).loadData(symbol);
+        }
+      }
+      
+      function setDurationNDraw(duration){
+        document.getElementById('storeDuration').innerText = duration;
+        checkFeaturesNDraw();
+      }
+      
+      function drawChart(features){
+        if (sessionStorage.getItem("chartModulesLoaded") != "loaded") return;
+        
+        var duration = document.getElementById('storeDuration').innerText;
+        var symbolData = JSON.parse(sessionStorage.getItem("symbolData"));
+        
+        var Data = constructDataForChart(symbolData, features);
+        var hAxisMin = getHorizontalAxisMin(symbolData, duration);
+        
+        var chartOptions = {
+          title: 'The Chart',
+          curveType: 'none',
+          legend: { position: 'bottom' },
+          explorer: {
+            actions: ['dragToZoom', 'rightClickToReset'],
+            axis: 'horizontal',
+            keepInBounds: true
+          },
+          hAxis: {
+            viewWindow:{
+              min: hAxisMin
+            }
+          }
+        };
+        
+        var chart = new google.visualization.LineChart(document.getElementById('theChart'));
+        chart.draw(Data, chartOptions);
+        
+//        var cli = chart.getChartLayoutInterface();
+//        var box = cli.getChartAreaBoundingBox();
+//        console.log(box);
+//        console.log(cli.getHAxisValue(box.left))
+//        console.log(cli.getVAxisValue(box.top))
+//        console.log(cli.getVAxisValue(box.top + box.height))
+      }
+      
+      function constructDataForChart(symbolData, features){
+        const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const featuresObj = {"Open Price":2, "High Price":3, "Low Price":4, "Close Price":5, "Last Price":6, "Traded Qty":8, "Traded Value":9, "Total Trades":11};
+        
+        var data = new google.visualization.DataTable();
+        data.addColumn('date', 'Date');
+        
+        for (var i = 0; i < features.length; i++){
+          data.addColumn('number', features[i]);
+        }
+        
+        for (var i = 0; i < symbolData.length; i++) {
+          if (symbolData[i] == "") continue;
+          
+          var symDataParts = symbolData[i].split(',');
+          // "SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,TIMESTAMP,TOTALTRADES,ISIN,"
+          // dataConsidered are 2,3,4,5,6,8,9,11
+          
+          var dateStr = symDataParts[10];
+          var dateParts = dateStr.split('-');
+          var day = parseInt(dateParts[0]);
+          var month = monthNames.indexOf(dateParts[1]);
+          var year = parseInt(dateParts[2]);
+          var date = new Date(year, month, day, 12, 0, 0);
+          
+          var eachRow = [date];
+          for (var j = 0; j < features.length; j++) {
+            var featurePos = featuresObj[features[j]];
+            eachRow.push(parseFloat(symDataParts[featurePos]));
+          }
+          data.addRow(eachRow);
+        }
+        return data;
+      }
+      
+      function getHorizontalAxisMin(symbolData, duration){
+        const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        
+        var lastData = symbolData[symbolData.length - 1];
+        var lastDataDateParts = [];
+        if (lastData != ""){
+          lastDataDateParts = lastData.split(',')[10].split('-');
+        }
+        
+        var i = 2;
+        while (lastData == ""){
+          lastData = symbolData[symbolData.length - i];
+          if (lastData != ""){
+            lastDataDateParts = lastData.split(',')[10].split('-');
+          }
+          i++;
+        }
+        
+        var dayLastDay = parseInt(lastDataDateParts[0]);
+        var monthLastDay = monthNames.indexOf(lastDataDateParts[1]);
+        var yearLastDay = parseInt(lastDataDateParts[2]);
+        
+        var hAxisMax = new Date(yearLastDay, monthLastDay, dayLastDay, 12, 0, 0);
+        
+        var backStep;
+        switch (duration){
+          case '1W':
+            backStep = 7;
+            break;
+          case '1M':
+            backStep = 30;
+            break;
+          case '1Y':
+            backStep = 365;
+            break;
+          case '5Y':
+            backStep = 5*365;
+            break;
+          case 'all':
+            backStep = 20*365;
+            break;
+          default:
+            backStep = 7;
+        }
+        
+        var hAxisMin = hAxisMax;
+        hAxisMin.setDate(hAxisMin.getDate() - backStep);
+        
+        var firstData = symbolData[0];
+        var firstDataDateParts = [];
+        if (firstData != ""){
+          firstDataDateParts = firstData.split(',')[10].split('-');
+        }
+        
+        var i = 1;
+        while (firstData == ""){
+          firstData = symbolData[i];
+          if (firstData != ""){
+            firstDataDateParts = firstData.split(',')[10].split('-');
+          }
+          i++;
+        }
+        
+        var dayFirstDay = parseInt(firstDataDateParts[0]);
+        var monthFirstDay = monthNames.indexOf(firstDataDateParts[1]);
+        var yearFirstDay = parseInt(firstDataDateParts[2]);
+        
+        var hDataMin = new Date(yearFirstDay, monthFirstDay, dayFirstDay, 12, 0, 0);
+        if (hDataMin.getTime() > hAxisMin.getTime()){
+          hAxisMin = hDataMin;
+        }
+        return hAxisMin;
+      }
+      
+      function checkFeaturesNDraw(){
+        var checkElems = document.querySelectorAll('body > div.dataFeatures > input[type="checkbox"]');
+        
+        // "SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,TIMESTAMP,TOTALTRADES,ISIN,"
+        // dataConsidered are 2,3,4,5,6,8,9,11
+        var features = [];
+        for (var i = 0; i < checkElems.length; i++){
+          if(checkElems[i].checked)
+          features.push(checkElems[i].name);
+        }
+        console.log(features);
+        
+        
+        drawChart(features);
+      }
+    </script>
+  </body>
+</html>
+
+

@@ -1,0 +1,27 @@
+<div class="header">
+  <h1 style="display:inline;color:white;">File Manager</h1>
+  <button type="button" class="btn btn-default btn-sm pull-right" onClick="logout()">
+    <span class="glyphicon glyphicon-log-out"></span> Log out
+  </button>
+</div>
+<div class="main-content">
+  <div style="text-align:center">
+  <h2>Main Console</h2>
+  
+  <input style="display:inline-block" type="file" id="filesToUpload" multiple="multiple"/>
+  <button onclick="checkNUploadFiles()">Upload Files</button><br/><br/>
+  
+  <progress id="progressBar" value="0" max="10">
+  </progress><br/><br/>
+  
+  <button onclick="listFiles()">List Files</button><br/><br/>
+  
+  <a id="theFile" href="" download>Download</a><br/><br/>
+  
+  <table align="center" id="filelist" border="1">
+  </table>
+  
+  
+  
+  </div>
+</div>

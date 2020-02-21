@@ -1,0 +1,246 @@
+<html>
+  <head>
+    <!-- stylesheet -->
+    <link href="https://cdn.rawgit.com/ruphil/BLOGGER-GAS/master/scribbleCanvas/static/css/literallycanvas.css" rel="stylesheet">
+    <style>
+      .literally {
+        min-height: 500px;
+      }
+    </style>
+    <!-- dependency: React.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react-with-addons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react-dom.js"></script>
+
+    <!-- Literally Canvas -->
+    <script src="https://cdn.rawgit.com/ruphil/BLOGGER-GAS/master/scribbleCanvas/static/js/literallycanvas.js"></script>
+  </head>
+  <body>
+    <h3 style="display:inline">Scribble Canvas</h3>&emsp;&emsp;
+    <span>Tab's Unique Id: </span><input id="uniqueid" type="text" disabled />&emsp;&emsp;
+    <span>Sync Rate: </span>
+    <select id="refreshrate" onChange="changerefreshrate()">
+      <option value="10000">Halt</option>
+      <option value="60">60 sec</option>
+      <option value="30">30 sec</option>
+      <option value="20">20 sec</option>
+      <option value="10">10 sec</option>
+      <option value="5" selected="selected">5 sec</option>
+      <option value="1">1 sec</option>
+    </select>&emsp;&emsp;
+    <span>Edit Mode: </span><input type="checkbox" id="editmode" onClick="editmodetoggle()"/>&emsp;&emsp;
+    <span>Paste Extent: </span><input id="pasteextent" type="text" value="0,0,0,0" disabled />
+    
+    <div class="my-drawing" id="mydrawing"></div>
+
+    <script>
+    
+      var MyTool = function(lc) {  // take lc as constructor arg
+        var self = this;
+        return {
+          name: 'Paste Helper',
+          iconName: 'paste',
+          optionsStyle: 'stroke-width',
+          strokeWidth: lc.opts.defaultStrokeWidth,
+          didBecomeActive: function(lc) {
+            var selectr = "#mydrawing > div > div.lc-drawing.with-gui > canvas:nth-child(2)"
+            var canvas = document.querySelector(selectr);
+            canvas.addEventListener('click', mouseclickpastehandler);
+            window.addEventListener('paste', pastefunctionhandler);
+          },
+          willBecomeInactive: function(lc){
+            var selectr = "#mydrawing > div > div.lc-drawing.with-gui > canvas:nth-child(2)"
+            var canvas = document.querySelector(selectr);
+            canvas.removeEventListener('click', mouseclickpastehandler);
+            window.removeEventListener('paste', pastefunctionhandler);
+          }
+        }
+      };
+    
+      var lc = LC.init(
+        document.getElementsByClassName('my-drawing')[0],
+        {imageURLPrefix: 'https://cdn.rawgit.com/ruphil/BLOGGER-GAS/master/scribbleCanvas/static/img',
+        tools: LC.defaultTools.concat([MyTool])}
+      );
+      
+      // Editor Part
+      
+
+      var timeoutVar;      
+      function editmodetoggle(){
+        var modeState = document.getElementById('editmode').checked;
+        console.log("editmodetoggle", modeState);
+        if(modeState){
+          clearTimeout(timeoutVar);
+          document.getElementById('refreshrate').disabled = true;
+          google.script.run.withSuccessHandler(loadSnapshotforEditing).load_snapshot();
+          google.script.run.setTabId(document.getElementById('uniqueid').value);
+          document.getElementById('mydrawing').style.pointerEvents  = "auto";
+        } else {
+          viewerMode();
+        }
+      }
+      
+      function loadSnapshotforEditing(snap){
+        lc.loadSnapshot(JSON.parse(snap));
+        console.log("snapshot downloaded to canvas for editing");
+      }
+      
+      function getTabIdAndUpdate(tabidonServer){
+        var tabIdOnBrowser = document.getElementById('uniqueid').value;
+        var modeState = document.getElementById('editmode').checked;
+        
+          if(modeState && tabidonServer == tabIdOnBrowser){
+            console.log("snap uploaded to cloud");
+            google.script.run.update_snapData(JSON.stringify(lc.getSnapshot()));
+          } else if (modeState  && tabidonServer != tabIdOnBrowser){
+            document.getElementById('editmode').checked = false;
+            document.getElementById('refreshrate').disabled = false;
+            changerefreshrate();
+          }
+      }
+      
+      function viewerMode(){
+        document.getElementById('refreshrate').disabled = false;
+        changerefreshrate();
+      }
+      
+      function drawingChangebyClick(){
+        console.log("drawingChangebyClick");
+        google.script.run.withSuccessHandler(getTabIdAndUpdate).getTabId();
+      }
+      
+      var selectr = "#mydrawing > div > div.lc-drawing.with-gui > canvas:nth-child(2)"
+      var canvas = document.querySelector(selectr);
+      canvas.addEventListener('click', drawingChangebyClick);
+      
+//      lc.on('drawingChange', function() {
+//        google.script.run.withSuccessHandler(getTabIdAndUpdate).getTabId();
+//      });
+      
+      // Viewer Part
+      
+      function makeid() {
+        var text = "";
+        var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-=_+,.<>/?";
+      
+        for (var i = 0; i < 18; i++)
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+        
+        document.getElementById('uniqueid').value = text;
+      }
+
+      makeid();
+
+      function getMousePos(evt) {
+        var selectr = "#mydrawing > div > div.lc-drawing.with-gui > canvas:nth-child(2)"
+        var canvas = document.querySelector(selectr);
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top
+        };
+      }
+
+     var mouseclickpastehandler = function (e) {
+       var pasteext = document.getElementById('pasteextent').value;
+       if(pasteext.split(',').length == 4){
+         document.getElementById('pasteextent').value = getMousePos(e).x.toString() + ',' + getMousePos(e).y.toString();
+       } else if ((pasteext.split(',').length == 2)){
+         document.getElementById('pasteextent').value = pasteext + ',' + getMousePos(e).x.toString() + ',' + getMousePos(e).y.toString();
+       }
+     }
+     
+     function scaleImage(dataurl, callback){
+       var pasteext = document.getElementById('pasteextent').value;
+       var pasteextArry = pasteext.split(',');
+       var width = pasteextArry[2] - pasteextArry[0];
+       var height = pasteextArry[3] - pasteextArry[1];
+       
+       var temp_img = new Image();
+       
+       temp_img.onload = function() {
+         var temp_canvas = document.createElement("canvas");
+         temp_canvas.width = width;
+         temp_canvas.height = height;
+         var temp_ctx = temp_canvas.getContext("2d");
+         temp_ctx.drawImage(temp_img, 0, 0, width, height);
+//         console.log(temp_canvas.toDataURL());
+         callback(temp_canvas);
+       };
+//       console.log(dataurl);
+       temp_img.src = dataurl;
+     }
+     
+     var pastefunctionhandler = function(e){
+        var modeState = document.getElementById('editmode').checked;
+//        console.log(modeState);
+        if(modeState){
+          if(e.clipboardData == false) return false; 
+          var imgs = e.clipboardData.items;
+          if(imgs == undefined) return false;
+        
+          var selectr = "#mydrawing > div > div.lc-drawing.with-gui > canvas:nth-child(2)"
+          var canvas = document.querySelector(selectr);
+          var ctx = canvas.getContext("2d");
+          
+          var pasteext = document.getElementById('pasteextent').value;
+          var pasteextArry = pasteext.split(',');
+          
+          if(pasteextArry.length == 4){
+            var img = new Image();
+            img.onload = function() {
+              var pasteext = document.getElementById('pasteextent').value;
+              var pasteextArry = pasteext.split(',');
+              lc.saveShape(LC.createShape('Image', {x: pasteextArry[0], y: pasteextArry[1], image: img}))
+              google.script.run.withSuccessHandler(getTabIdAndUpdate).getTabId();
+            };
+            
+            for (var i = 0; i < imgs.length; i++) {
+              if (imgs[i].type.indexOf("image") == -1) continue;
+              var imgObj = imgs[i].getAsFile();
+              const reader = new FileReader();
+              
+              reader.onloadend = function() {  
+                scaleImage(reader.result, function(canvas){
+                  img.src = canvas.toDataURL();
+                });
+              }
+
+              reader.readAsDataURL(imgObj);
+            }
+          }
+          
+        }
+      }
+      
+      function loadSnapshot(snap){
+        lc.loadSnapshot(JSON.parse(snap));
+        console.log("snapshot downloaded to canvas");
+        document.getElementById('mydrawing').style.pointerEvents  = "none";
+        
+        var modeState = document.getElementById('editmode').checked;
+        if(modeState) editmodetoggle();
+      }
+      
+      google.script.run.withSuccessHandler(loadSnapshot).load_snapshot();  
+      
+      function timerLoopLoadSnapshot () {
+        var timeInterval = parseInt(document.getElementById('refreshrate').value, 10) * 1000;
+//        console.log(timeInterval);
+        google.script.run.withSuccessHandler(loadSnapshot).load_snapshot();
+        timeoutVar = setTimeout(function () {
+          timerLoopLoadSnapshot();
+        }, timeInterval);
+      }
+      
+      function changerefreshrate(){
+        console.log("refreshratechanged");
+        clearTimeout(timeoutVar);
+        timerLoopLoadSnapshot();
+      }
+      
+      timerLoopLoadSnapshot();
+      
+    </script>
+  </body>
+</html>

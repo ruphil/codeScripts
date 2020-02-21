@@ -1,0 +1,57 @@
+import itertools
+
+ptLyr = QgsProject.instance().mapLayersByName('pts')[0]
+prP = ptLyr.dataProvider()
+
+#bufferLyr = QgsProject.instance().mapLayersByName('Buffered')[0]
+#prB = bufferLyr.dataProvider()
+
+lineLyrOGR = QgsVectorLayer("D:/lines/lines.shp",'lines',"ogr")
+print(lineLyrOGR.isValid())
+
+QgsProject.instance().addMapLayer(lineLyrOGR)
+lineLyrOGR.startEditing()
+
+instance = 1
+for ftr1, ftr2 in itertools.combinations(ptLyr.getFeatures(),r=2):
+    grid1_x = 77.52175 + (77.54224 - 77.52175) / 5
+    grid1_y = 12.95046 + (12.97048 - 12.95046) / 5
+    ftr1_x = float(ftr1.geometry().asPoint().x())
+    ftr1_y = float(ftr1.geometry().asPoint().y())
+    ftr2_x = float(ftr2.geometry().asPoint().x())
+    ftr2_y = float(ftr2.geometry().asPoint().y())
+#    print(ftr1_x, ftr1_y, ftr2_x, ftr2_y)
+    
+    if ((ftr1_x < grid1_x) and (ftr2_x < grid1_x) and (ftr1_y < grid1_y) and (ftr2_y < grid1_y)):    
+        feat = QgsFeature()
+        startPt = QgsPoint(ftr1_x, ftr1_y)
+        endPt = QgsPoint(ftr2_x, ftr2_y)
+        feat.setGeometry(QgsGeometry.fromPolyline([startPt, endPt]))
+        feat.setAttributes([1])
+        
+#        for pFtr in bufferLyr.getFeatures():
+#            if pFtr.geometry().contains(feat.geometry()):
+        lineLyrOGR.addFeature(feat)
+            
+        if(instance % 5000 == 0):
+            print (instance)
+        instance += 1
+
+lineLyrOGR.commitChanges()
+iface.vectorLayerTools().stopEditing(lineLyrOGR)
+print('done')
+
+
+#lineLyr = QgsVectorLayer("Linestring?crs=EPSG:4326","lines2","memory")
+#print(lineLyr.isValid())
+#
+#prL = lineLyr.dataProvider()
+#prL.addFeatures(feats)
+#
+#QgsProject.instance().addMapLayer(lineLyr)
+
+
+fet = QgsFeature()
+fet.setGeometry(QgsGeometry.fromPoint(QgsPoint(10,10)))
+fet.setAttributes(["Johny", 2, 0.3])
+pr.addFeatures([fet])

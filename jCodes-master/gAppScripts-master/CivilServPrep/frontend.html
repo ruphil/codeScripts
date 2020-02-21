@@ -1,0 +1,152 @@
+<head>
+<style>
+.description{
+  font-size:50%;
+}
+.subcat{
+  font-size:70%;
+}
+.links{
+  font-size:60%;
+}
+a:visited { color:rgb(0, 0, 238); }
+</style>
+</head>
+
+<body>
+<h3>Civil Services Preparation</h3>
+
+<div style="font-size: 10px;">
+<table border="1" style="border-collapse: collapse;border-spacing: 0;font-size:80%;min-width:300px;max-width: 300px">
+<tr><td align="center" colspan="3"><b>Enlighten your Day with a Thirukkural</b></td></tr>
+<tr><td align="center"><span id="kuralEn"></span></td><td align="center"><span id="kuralAdhigaaram"></span></td></tr>
+<tr><td align="center">Kural</td><td align="center" colspan="2"><span id="kural"></span></td></tr>
+<tr><td align="center">Meaning</td><td colspan="2"><span id="vilakkam2"></span></td></tr>
+</table>
+</div><br/>
+
+<div style="font-size: 10px;">
+<table border="1" style="border-collapse: collapse;border-spacing: 0;font-size:80%;min-width:300px;max-width: 300px">
+<tr><td align="center" colspan="3"><b>Random Interview Question</b></td></tr>
+<tr><td align="center">Question</td><td colspan="2"><span id="iQues"></span></td></tr>
+<tr><td align="center">Answer</td><td align="center" colspan="2"><span id="iAns"></span></td></tr>
+<tr><td align="center">Explantion</td><td colspan="2"><span id="iExp"></span></td></tr>
+</table>
+</div><br/>
+
+<span style="display:none" id="vilakkam1"></span>
+
+<table border="1" style="border-collapse: collapse;border-spacing: 0;font-size:80%;min-width:300px;max-width: 300px">
+<tr><td align="center" colspan="1"><span>Affairs Date</span></td><td align="center" colspan="3"><input type="date" id="affairDate"></td></tr>
+<tr><td colspan="1" align="center"><span style="font-size:70%;">Download Directly</span><br/><input type="checkbox" id="drctDwnld"></td><td colspan="3" align="center"><input type="button" value="Fetch" onclick="fetchIt()"></td></tr>
+<tr><td align="center" rowspan="2"><b>Daily Content</b></td><td align="center">1</td><td colspan="1">Daily Affairs<br/>
+<p class="description">It consists of the following:<br/>
+(i) Daily Main Test Series<br/>
+(ii) Daily Prelims Test Series<br/>
+(iii) Daily Current Affairs<br/></p></td>
+<td id="dailyAffairs" align="center" valign="middle"></td></tr>
+
+<tr><td align="center">2</td><td colspan="1">Hindu Newspaper</td><td align="center" valign="middle"><p id="hinduPaperOne"></p><p id="hinduPaperTwo"></p></td></tr>
+
+<tr><td colspan="4"></td></tr>
+<tr><td colspan="4" height="5vh"></td></tr>
+<tr><td colspan="4"></td></tr>
+
+<tr><td align="center"><b>Monthly <br/> Content</b></td><td colspan="2">Monthly Storming<br/>
+<p class="description">IASParliaments's Prelims and Mains Storming PDF</p>
+</td><td id="monthlyStorming" align="center" valign="middle"></td></tr>
+</table>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+function handleKural(data){
+//  console.log(data);
+  var loadingIDs = ["kuralEn", "kuralAdhigaaram", "kural", "vilakkam1", "vilakkam2"];
+  for (var i = 0; i < data[0].length; i++){
+    if (i == 2){
+      var kuralArry = data[0][i].split(" ");
+      var kural = "";
+      console.log(kuralArry);
+      for (var j = 0; j < kuralArry.length; j++) {
+        kural += "<b>" + kuralArry[j] + "</b> ";
+        if(j == 3) kural += "<br/>";
+      }
+      document.getElementById(loadingIDs[i]).innerHTML = kural;
+    } else document.getElementById(loadingIDs[i]).innerHTML = data[0][i];
+  }
+}
+
+function loadThirukkural(){
+  google.script.run.withSuccessHandler(handleKural).getThirukkural();
+}
+
+function handleIQues(data){
+//  console.log(data);
+  var loadingIDs = ["iQues", "iAns", "iExp"];
+  for (var i = 0; i < data[0].length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = data[0][i];
+  }
+}
+
+function loadInterviewQues(){
+  google.script.run.withSuccessHandler(handleIQues).getInterviewQuestions();
+}
+
+const monthNames = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function showLoading(){
+  var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyStorming"];
+  for (var i = 0; i < loadingIDs.length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = "Loading...";
+  }
+}
+
+function handleFilesInfo(filesInfo){
+  console.log(filesInfo);
+  
+  var linkIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyStorming"];
+  for (var i = 0; i < linkIDs.length; i++){
+    document.getElementById(linkIDs[i]).innerHTML = "<a class='getID' href='#' fileID='" + filesInfo[i][0] + "'>" + "<p class='links'>" + filesInfo[i][1] + "</p>" + "</a>";
+  }
+  
+  $('.getID').click(function(){
+    if(document.getElementById('drctDwnld').checked){
+      window.location.href = 'https://drive.google.com/uc?export=download&id=' + $(this).attr('fileID');
+    } else {
+      window.open("https://drive.google.com/file/d/" + $(this).attr('fileID') + "/view",'_blank');
+    }
+  });
+}
+
+// This function has no work hereafter...
+function onFailure(){
+  var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+  for (var i = 0; i < loadingIDs.length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = "Not Available";
+  }
+}
+
+function fetchLinksFrmServer(){
+  var date = document.getElementById("affairDate").valueAsDate;
+  google.script.run.withSuccessHandler(handleFilesInfo).withFailureHandler(onFailure).getLinks([date.getFullYear(), date.getMonth(), date.getDate()]);
+}
+
+window.onload = function () {
+  var sterday = new Date();
+  sterday.setDate(sterday.getDate() - 1);
+  document.getElementById("affairDate").valueAsDate = sterday;
+  
+  loadThirukkural();
+  loadInterviewQues();
+  
+  fetchIt();
+}
+
+function fetchIt(){
+   showLoading();
+   fetchLinksFrmServer();
+}
+</script>
+</body>

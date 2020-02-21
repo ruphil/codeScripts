@@ -1,0 +1,203 @@
+<body style="margin:0px">
+<div style="border: 2px solid blue;background-color:blue;color:white"><h2 style="margin:10px">Content Manager CS</h2></div>
+
+<div id="bodyApp"></div>
+
+<script>
+function doAJAXPostRequest(url, params, callback){
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('POST', url, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            callback(this.responseText);
+        }
+    };
+    xhttp.send(params);
+}
+
+// ---------------------------------   file Listing   ----------------------------------
+function handleFileList(data){
+    jsonParsedData = JSON.parse(data);
+    showInTable(jsonParsedData.files);
+}
+
+function showInTable(fileList){
+    var table = document.getElementById("filelist");
+    table.innerHTML = "";
+    var row = table.insertRow(-1);
+    for(var i = 0; i < fileList.length; i++){
+        if (i % 10 == 0) {
+            row = table.insertRow(-1);
+        }
+        var cell = row.insertCell(0);
+        cell.innerHTML = fileList[i][0];
+        // console.log(fileList[i][0]);
+    }
+}
+
+function listFiles(){
+    var fullURL = location.origin + "/filehandlercs";
+    var params = "mode=listfiles";
+    doAJAXPostRequest(fullURL, params, handleFileList);
+}
+
+// ------------------------------   Upload File Functions   -------------------------------------
+
+function serverData(data){
+    //console.log(data);
+}
+
+function doPostFileRequestUploadToSheet(url, params, callback){
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('POST', url, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            callback(this.responseText);
+        }
+    };
+    xhttp.send(params);
+}
+
+
+function uploadFileInLoop(sheetInfo, fileName, contentParts){
+    var whetherLastChunk = 0;
+    var maxPercent = document.getElementById('progressBar').max;
+    
+    var currentChunkInstance = maxPercent - contentParts.length + 1;
+    
+    if(currentChunkInstance == 1) {
+        console.log(sheetInfo);
+        console.log(contentParts.length);
+    }
+    // console.log(sheetInfo);
+
+    document.getElementById('progressBar').value = currentChunkInstance - 1;
+
+    if (contentParts.length == 0){
+        console.log("the end");
+    }
+
+    if (contentParts.length != 0){
+        var fullURL = location.origin + "/filehandlercs";
+
+        var jsonParsedSheetInfo = JSON.parse(sheetInfo);
+        var sheetID = jsonParsedSheetInfo.sheetID;
+        
+        var currentContentPart = contentParts.shift();
+        console.log(currentContentPart.substring(0,50));
+
+        var params = "mode=upload&name=" + fileName + "&content=" + currentContentPart + "&sheetID=" + sheetID + "&currentChunkInstance=" + currentChunkInstance;
+
+        if (contentParts.length == 0) whetherLastChunk = 1;
+        if (whetherLastChunk){
+            params = "mode=upload&name=" + fileName + "&content=" + currentContentPart + "&sheetID=" + sheetID + "&currentChunkInstance=" + currentChunkInstance + "&lastChunk=yes";
+        }
+        doPostFileRequestUploadToSheet(fullURL, params, serverData);
+        
+        setTimeout(function(){ 
+            uploadFileInLoop(sheetInfo, fileName, contentParts); 
+        }, 1100);
+    }
+}
+
+function doPostFileRequestSheetCreation(url, params, fileName, contentParts, callback){
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('POST', url, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            callback(this.responseText, fileName, contentParts);
+        }
+    };
+    xhttp.send(params);
+}
+
+// just create the file on server and return ID
+function createFileOnServerNUpload(fileName, contentParts){
+    var fullURL = location.origin + "/filehandlercs";
+    var params = "mode=upload&name=" + fileName + "&content=justFileCreation";
+    doPostFileRequestSheetCreation(fullURL, params, fileName, contentParts, uploadFileInLoop);
+}
+
+function readNUploadFile(file, callback){
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = function () {
+        var content = reader.result;
+        //console.log(content);
+        var fileName = file.name;
+
+        var base64Str = content.split("base64,")[1];
+        console.log(base64Str.length);
+        var uriEncoded = encodeURIComponent(base64Str);
+        //console.log(base64Str);
+        //console.log(uriEncoded);
+        //console.log(base64Str.split(" ").length - 1);
+        
+        var contentParts = chunkSubstr(uriEncoded, 49000);
+        //console.log(contentParts);
+
+        document.getElementById('progressBar').max = contentParts.length;
+
+        callback(fileName, contentParts);
+    }
+}
+
+function chunkSubstr(str, size) {
+  const numChunks = Math.ceil(str.length / size)
+  const chunks = new Array(numChunks)
+
+  for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+    chunks[i] = str.substr(o, size)
+  }
+
+  return chunks
+}
+
+function uploadFiles(){
+    var fileInput = document.getElementById('filesToUpload');
+    var file = fileInput.files.item(0);
+    readNUploadFile(file, createFileOnServerNUpload);
+}
+
+// ------------------------------   check User and OTP   -------------------------------------
+
+function handleSessionResponse(data){
+    jsonParsedData = JSON.parse(data);
+    console.log(jsonParsedData);
+    document.getElementById("bodyApp").innerHTML = jsonParsedData.html;
+}
+
+function checkUser(){
+    var fullURL = location.origin + "/contentmanagercsajax";
+    let sessionID = sessionStorage.getItem('sessionID');
+    //var sessionID = 'pack';
+    var params = "type=usercheck&sessionID=" + sessionID;
+    doAJAXPostRequest(fullURL, params, handleSessionResponse);
+}
+
+window.onload = checkUser();
+
+function handleOTPResponse(data){
+    jsonParsedData = JSON.parse(data);
+    console.log(jsonParsedData);
+    if(jsonParsedData.otpValid){
+        sessionStorage.setItem("sessionID", jsonParsedData.sessionID);
+        document.getElementById("bodyApp").innerHTML = jsonParsedData.html;
+    } else  {
+        document.getElementById("bodyApp").innerHTML = jsonParsedData.html;
+        document.getElementById("errormsg").innerText = "OTP Invalid Try Again";
+    }
+}
+
+function checkOTP(){
+    var otpEntered = document.getElementById("otp").value;
+    console.log(otpEntered);
+    var fullURL = location.origin + "/contentmanagercsajax";
+    var params = "type=otpcheck&otp=" + otpEntered;
+    doAJAXPostRequest(fullURL, params, handleOTPResponse);
+}
+</script>

@@ -1,0 +1,34 @@
+jack = QgsProject.instance().mapLayersByName('pick')[0]
+pr = jack.dataProvider()
+
+gPolygon = QgsGeometry.fromPolygonXY([[QgsPointXY(77.52177, 12.97026), QgsPointXY(77.52189, 12.97021), QgsPointXY(77.5219, 12.97014)]])
+
+feat = QgsFeature()
+feat.setGeometry(gPolygon)
+pr.addFeatures([feat])
+
+selected_fid = []
+
+# Get the first feature id from the layer
+for feature in jack.getFeatures():
+    selected_fid.append(feature.id())
+    break
+
+selected_fid
+
+pr.deleteFeatures([1])
+
+jack.triggerRepaint()
+
+jack = QgsProject.instance().mapLayersByName('vt_modified')[0]
+pr = jack.dataProvider()
+
+mick = pr.identify(QgsPointXY(77.52174,12.97009), QgsRaster.IdentifyFormatValue).results()[1]
+
+
+layer = qgis.utils.iface.activeLayer()
+import itertools
+# with itertools permutations, length of the permutations(2) in this case.
+for geom1,geom2 in itertools.permutations(layer.getFeatures(),r=2):
+      if geom1.geometry().touches(geom2.geometry()):
+            print (geom1.id(),geom2.id())

@@ -1,0 +1,70 @@
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<h1 style="display: inline;">Chores Daily (<?= new Date() ?>)</h1><br/><br/>
+<table><tr><td valign="top">
+<h3 style="display: inline;">LovedOne's BirthDay Today:</h3><br/><br/>
+Name: <?= name_birthday ?><br/>
+Date: <?= date_birthday ?>
+
+<br/><br/>
+<h3 style="display: inline;">Bookmarks:</h3><br/>
+
+<ul>
+<?
+bookmarks.forEach(function(bookmark) { ?>
+<li><a href="<?= bookmark[1] ?>" target="_blank"><?= bookmark[0] ?></a></li><br/>
+<? }); ?>
+</ul>
+
+<h3 style="display: inline;">Weight Monitor (Target: 64 kg to 70 kg)</h3><br/><br/>
+<div>Enter Your Weight Today
+<input type="text" id="weight">
+</div></td>
+<td valign="top"><div id="curve_chart" style="width: 900px; height: 500px"></div></td>
+</tr></table>
+<script>
+function lockif(data){
+    document.getElementById("weight").value = data[1];
+  if (data[0] == 1){
+    document.getElementById("weight").disabled = true;
+  }
+}
+
+function freeze(truerfalse){
+  if(truerfalse){
+    document.getElementById("weight").disabled = truerfalse;
+    google.script.run.withSuccessHandler(drawChart).get_chart_data();
+  }else{
+    alert("Invalid Password");
+  }
+}
+
+document.getElementById("weight").onkeyup = function(e){ if (e.keyCode == 13) { 
+  var weight = document.getElementById("weight").value
+  var passwd = prompt("Password Please", "How Dare U");
+  if (isNaN(weight)){ alert("Please enter only numbers");} else {
+    google.script.run.withSuccessHandler(freeze).add_weight([weight, passwd]);
+  }
+}};
+</script>
+<script type="text/javascript">
+google.charts.load('current', {'packages':['corechart']});
+google.charts.setOnLoadCallback(drawChart);
+
+function drawChart(array) {
+  console.log(array);
+  var data = google.visualization.arrayToDataTable(array);
+
+  var options = {
+    title: 'Weight Monitor',
+    curveType: 'function',
+    legend: { position: 'bottom' }
+  };
+
+  var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+  chart.draw(data, options);
+}
+
+google.script.run.withSuccessHandler(drawChart).get_chart_data();
+google.script.run.withSuccessHandler(lockif).lock_check();
+</script>

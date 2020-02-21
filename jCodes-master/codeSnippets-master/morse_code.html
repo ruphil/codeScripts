@@ -1,0 +1,46 @@
+<svg width="500" height="500">
+   <circle id="lightsource" cx="150" cy="150" r="100" stroke="green" stroke-width="4" fill="white" />
+</svg>
+<div id="endmsg">
+<script>
+var morse_array = [5,1,5,1,1,5,5];
+var i = 1;
+
+function morseToBlink(i){
+  function blink_start(){
+    setTimeout(function(){
+      light_on();
+    }, 500);
+  }
+
+  function light_on(){
+    document.getElementById("lightsource").setAttribute("fill", "yellow");
+    setTimeout(function(){
+      document.getElementById("lightsource").setAttribute("fill", "white");
+    }, i * 250);
+  }
+
+  blink_start();
+}
+
+var i = 0;
+
+function myLoop () {
+   setTimeout(function () {
+      morseToBlink(morse_array[i]);
+      i++;
+      if (i < morse_array.length) {
+         myLoop();
+      }
+      setTimeout(function () {
+        if (i == morse_array.length) {
+          document.getElementById("endmsg").innerHTML = "The End"
+        }
+      }, 4000);
+   }, 2000);
+}
+
+myLoop();
+
+
+</script>

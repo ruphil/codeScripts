@@ -1,0 +1,14 @@
+<div style="text-align:center">
+<h2>Main Console</h2>
+
+<input type="file" id="filesToUpload" multiple="multiple">
+<button onclick="uploadFiles()">Upload Files</button><br/><br/>
+
+<progress id="progressBar" value="0" max="10">
+</progress><br/><br/>
+
+<button onclick="listFiles()">List Files</button><br/><br/>
+
+<table align="center" id="filelist" border="1">
+</table>
+</div>

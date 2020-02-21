@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      .heading{
+        font-size: 600%;
+        user-select: none;
+      }
+      .others{
+        font-size: 350%;
+        user-select: none;
+      }
+      input[type="checkbox"]{
+        width: 40px; /*Desired width*/
+        height: 40px; /*Desired height*/
+      }
+      .options {
+        display: inline-block;
+        color: white;
+        border: 2px solid purple;
+        margin: 10px;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body bgcolor='green'>
+  <h1 class="heading" align="center" style="color:white;">Hindi Tests</h1>
+  <h4 class="others" id="quesStatus" align="center" style="color:white;"></h4>
+  <h3 class="others" align="center" style="color:purple;cursor:pointer"><span style="border:2px solid white;padding:2px" onClick="getQuestion()">Next Question</span></h3>
+  <div class="others" style="border:2px solid white;min-height: 50px;width:70%; margin:0 auto;" id="question"></div>
+  <h3 class="others" align="center" style="color:purple;cursor:pointer"><span style="border:2px solid white;padding:2px" onClick="checkAnswer()">Check Answer</span></h3>
+  <div class="others" style="border:2px solid white;min-height: 100px;width:70%; margin:0 auto;" id="answer"></div><br/>
+  <div class="others" style="color: white;text-align:center" id='displayResults'></div>
+  <div class="others" style="color: white;text-align:center"><input type="checkbox" id="ggltrnslt" onClick="removeMeaningBox()"><span>Google Translate</span></div><br/>
+  <div class="others" style="color: white;text-align:center" id="meaning"></div><br/>
+  <div class="others" style="border:2px solid white;min-height: 100px;width:70%; margin:0 auto;" id="options"></div>
+  
+  <div id="holdAnswer" style="display: none;"></div>
+  <div id="qrowNumber" style="display: none;"></div>
+  
+  <script>
+    function checkAnswer(){
+      var ans = document.getElementById('answer').innerText;
+      var holdingAns = document.getElementById('holdAnswer').innerText.split(" ").join("");
+      var rwno = document.getElementById('qrowNumber').innerText;
+      if (ans == holdingAns){
+        document.getElementById('displayResults').innerHTML = "Wow, You Made It<br/><br/>";
+        google.script.run.markDone(rwno);
+        setTimeout(function(){ getQuestion(); }, 1000);
+      } else {
+        document.getElementById('displayResults').innerHTML = "Try Again Dear<br/><br/>";
+      }
+    }
+    
+    function removeMeaningBox(){
+      var transCheck = document.getElementById('ggltrnslt').checked;
+      if (!transCheck) document.getElementById('meaning').innerHTML = "";
+    }
+  
+    function loadQuestion(data){
+      document.getElementById('displayResults').innerHTML = "";
+      document.getElementById('holdAnswer').innerHTML = data[0][0][1].trim();
+      document.getElementById('qrowNumber').innerHTML = data[2];
+      document.getElementById('quesStatus').innerHTML = "Completed: " + data[3] + " of <?= lastRow?>";
+      document.getElementById('question').innerHTML = "<h3 align='center' style='color:white'>" + data[0][0][0].trim() + "</h3>";
+      var shfl_options = shuffleData(data[0][0][1].trim(), data[1][0][0][1].trim(), data[1][1][0][1].trim());
+      
+      var options_HTML = "";
+      for (var i = 0; i < shfl_options.length; i++){
+        options_HTML += "<span style='user-select:none;' class='options' onClick='moveToAns(this)'>" + shfl_options[i] + "</span>";
+      }
+      document.getElementById('options').innerHTML = options_HTML;
+      document.getElementById('answer').innerHTML = "";
+    }
+    
+    function displayMeaning(meaning){
+      document.getElementById('meaning').innerHTML = meaning;
+    }
+    
+    function moveToAns(e){
+      var transCheck = document.getElementById('ggltrnslt').checked;
+      if (!transCheck) {
+        var ans_HTML = document.getElementById('answer').innerHTML;
+        ans_HTML += "<span style='user-select:none;' class='options' onClick='moveToOpt(this)'>" + e.innerText + "</span>";
+        document.getElementById('answer').innerHTML = ans_HTML;
+        e.parentNode.removeChild(e);
+      } else {
+        google.script.run.withSuccessHandler(displayMeaning).getMeaning(e.innerText);
+      }
+    }
+    
+    function moveToOpt(e){
+      var transCheck = document.getElementById('ggltrnslt').checked;
+      if (!transCheck) {
+        var opt_HTML = document.getElementById('options').innerHTML;
+        opt_HTML += "<span style='user-select:none;' class='options' onClick='moveToAns(this)'>" + e.innerText + "</span>";
+        document.getElementById('options').innerHTML = opt_HTML;
+        e.parentNode.removeChild(e);
+      } else {
+        google.script.run.withSuccessHandler(displayMeaning).getMeaning(e.innerText);
+      }
+    }
+  
+    window.onload = function(){
+      getQuestion();
+    };
+    
+    function getQuestion(){
+      google.script.run.withSuccessHandler(loadQuestion).getQuestion();
+    }
+    
+    function shuffleData(dat1, dat2, dat3){
+      var options = (dat1 + ' ' + dat2 + ' ' + dat3).split(' ');
+      var shuffled_options = shuffle(options);
+      return shuffled_options;
+    }
+    
+    function shuffle(a) {
+      var j, x, i;
+      for (i = a.length - 1; i > 0; i--) {
+          j = Math.floor(Math.random() * (i + 1));
+          x = a[i];
+          a[i] = a[j];
+          a[j] = x;
+      }
+      return a;
+    }
+  </script>
+  </body>
+</html>

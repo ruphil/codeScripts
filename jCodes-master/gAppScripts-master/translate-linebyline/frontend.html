@@ -1,0 +1,46 @@
+<h3 style="display: inline;">Translate Hindi Line by Line</h3><br/><br/>
+
+<select id="dropdown">
+<? metadata.forEach(function(datum) { ?>
+<option value="<?= datum[0] ?>"><?= datum[1] ?></option>
+<? }); ?>
+</select>
+<input type="button" id="show" value="Show" onclick="fetch_story()"/>
+<input type="button" id="translate" value="Translate" onclick="translate_story()"/>
+<input type="button" id="print" value="Print" onclick="print_story()"/>
+<br/><br/>
+<div id="hindistory"></div>
+<div id="englishtranslation"></div>
+<script>
+function show_story(data){
+  document.getElementById("hindistory").innerHTML = "<b>Title: </b>" + data[0] + "<br/><br/><b>Story:</b><br/>" + data[1] + "<br/>"
+}
+function fetch_story(){
+  ID = document.getElementById("dropdown").value;
+  google.script.run.withSuccessHandler(show_story).fetch_story(ID);
+}
+
+function show_translation(trans){
+  document.getElementById("englishtranslation").innerHTML = "<br/><b>Translation:</b><br/>" + "<b>Each_Word_Translation:</b><br/>" + trans[0] + "<br/><br/><b>Full_Para_Translation:</b><br/>" + trans[1]
+}
+function translate_story(){
+  document.getElementById("englishtranslation").innerHTML = "<br/><b>Translating...</b><br/>"
+  ID = document.getElementById("dropdown").value;
+  google.script.run.withSuccessHandler(show_translation).translate_linebyline(ID);
+}
+function print_story(){
+  var mywindow = window.open('', 'PRINT', 'height=400,width=600');
+
+    mywindow.document.write('<html><head><title>' + document.title  + '</title>');
+    mywindow.document.write('</head><body >');
+    mywindow.document.write(document.getElementById('hindistory').innerHTML);
+    mywindow.document.write(document.getElementById('englishtranslation').innerHTML);
+    mywindow.document.write('</body></html>');
+
+    mywindow.document.close(); // necessary for IE >= 10
+    mywindow.focus(); // necessary for IE >= 10*/
+
+    mywindow.print();
+    mywindow.close();
+}
+</script>

@@ -1,0 +1,46 @@
+<body>
+<h3 style="display: inline;">Most Famous Personalities</h3> <h6 style="display: inline;">(Total Available: 12278)</h6><br/><br/>
+
+Today's Personality Name: <strong><?= name ?></strong> <br/><br/>
+<img src="data:image/jpg;base64,<?= photo ?>" alt="thefamousperson" /><br/>
+<div id="information">
+<?
+
+var sections = info.split('||||');
+var quickfacts = sections[0].split('||'); ?>
+<p><strong><?= quickfacts[0] ?></strong></p>
+<? 
+var quick_sections = quickfacts[1].split('\n');
+for (var i = 0; i < quick_sections.length; i++) {
+?>
+  <?= quick_sections[i] ?><br/>
+<? } ?>
+
+
+<?
+for (var i = 1; i < sections.length; i++) {
+  var subsections = sections[i].split('||');
+  for (var j = 0; j < subsections.length; j++){
+    if (j == 0) { ?>
+  <p><strong><?= subsections[j] ?></strong></p>
+  <? } else { ?>
+  <p><?= subsections[j] ?></p>
+<? }}} ?>
+ </div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+$(document).ready(function() { 
+  console.log(2);
+  var txt = $('#information').html();
+//  console.log(txt);
+  
+  var reg_exp = /[^a-zA-Z0-9 .,:"?!@#$%^&*()-=_+<\/>]/gi
+  var re = new RegExp(reg_exp);
+  txt = txt.replace(re, '');
+
+  $('#information').html(txt);
+});
+
+</script>
+
+</body>

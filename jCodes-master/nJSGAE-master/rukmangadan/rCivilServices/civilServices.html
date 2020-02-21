@@ -1,0 +1,113 @@
+<head>
+<title>Civil Services</title>
+<style>
+.description{
+  font-size:50%;
+}
+.subcat{
+  font-size:70%;
+}
+.links{
+  font-size:60%;
+}
+a:visited { color:rgb(0, 0, 238); }
+</style>
+</head>
+
+<body>
+<h2>Civil Services Preparation</h2>
+
+<div style="font-size: 10px;">
+<span>Enlighten your day with a Thirukkural:</span>
+{{tkNo}}
+{{tkAdhigaram}}<br/>
+<b>{{tkLine1}}</b></br>
+<b>{{tkLine2}}</b></br>
+<p style="max-width: 450px;word-wrap: break-word;">{{tkVilakkam}}</p>
+</div>
+
+<span>Affairs Date</span> <input type="date" id="affairDate"> <input type="button" value="Fetch" onclick="fetchIt()">
+<br/>
+<span style="font-size:70%;">Download Directly</span><input type="checkbox" id="drctDwnld">
+<table border="1" style="border-collapse: collapse;border-spacing: 0;font-size:80%">
+
+<tr><td><b>Daily Content</b></td><td colspan="3"></td></tr>
+<tr><td align="center">1</td><td colspan="2">Daily Affairs<br/>
+<p class="description">It consists of the following:<br/>
+(i) Daily Main Test Series<br/>
+(ii) Daily Prelims Test Series<br/>
+(iii) Daily Current Affairs<br/></p></td>
+<td id="dailyAffairs" align="center" valign="middle"></td></tr>
+
+<tr><td align="center">2</td><td colspan="2">Hindu Newspaper</td><td align="center" valign="middle"><p id="hinduPaperOne"></p><p id="hinduPaperTwo"></p></td></tr>
+
+<tr><td colspan="4" height="5vh"></td></tr>
+<tr><td><b>Monthly Content</b></td><td colspan="3"></td></tr>
+<tr><td align="center">1</td><td colspan="2">Monthly Magazine<br/>
+<p class="description">IASBaba's Monthly Magazine PDF</p>
+</td><td id="monthlyMags" align="center" valign="middle"></td></tr>
+<tr><td align="center">2</td><td colspan="2">Monthly Storming<br/>
+<p class="description">IASParliaments's Prelims and Mains Storming PDF</p>
+</td><td id="monthlyStorming" align="center" valign="middle"></td></tr>
+</table>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+const monthNames = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+function showLoading(){
+  var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+  for (var i = 0; i < loadingIDs.length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = "Loading...";
+  }
+}
+function handleFilesInfo(filesInfo){
+  filesInfoObj = JSON.parse(filesInfo);
+  console.log(filesInfoObj);
+
+  var linkIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+  for (var i = 0; i < linkIDs.length; i++){
+    document.getElementById(linkIDs[i]).innerHTML = "<a class='getID' href='#' fileID='" + filesInfoObj[linkIDs[i]].id + "'>" + "<p class='links'>" + filesInfoObj[linkIDs[i]].name + "</p>" + "</a>";
+  }
+  
+  $('.getID').click(function(){
+    if(document.getElementById('drctDwnld').checked){
+      window.location.href = 'https://drive.google.com/uc?export=download&id=' + $(this).attr('fileID');
+    } else {
+      window.open("https://drive.google.com/file/d/" + $(this).attr('fileID') + "/view",'_blank');
+    }
+  });
+}
+// This function has no work hereafter...
+function onFailure(){
+  var loadingIDs = ["dailyAffairs", "hinduPaperOne", "hinduPaperTwo", "monthlyMags", "monthlyStorming"];
+  for (var i = 0; i < loadingIDs.length; i++){
+    document.getElementById(loadingIDs[i]).innerHTML = "Not Available";
+  }
+}
+function fetchLinksFrmServer(){
+  var date = document.getElementById("affairDate").valueAsDate;
+  var xhttp;
+  xhttp=new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      handleFilesInfo(this.responseText);
+    }
+  };
+  var urlFullPath = location.origin + '/filehelpercs' + '?year=' + date.getFullYear() + '&month=' + date.getMonth() + '&date=' + date.getDate();
+  xhttp.open("GET", urlFullPath, true);
+  xhttp.send();
+}
+window.onload = function () {
+  var sterday = new Date();
+  sterday.setDate(sterday.getDate() - 1);
+  document.getElementById("affairDate").valueAsDate = sterday;
+  fetchIt();
+}
+function fetchIt(){
+   showLoading();
+   fetchLinksFrmServer();
+}
+</script>
+</body>

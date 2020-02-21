@@ -1,0 +1,142 @@
+<head>
+  <link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet'/>
+  <style>
+  body { 
+    background-color:#FFCC80;
+  }
+  .heading{
+    top:0.5em;
+    color:#E65100;
+    font: 500 62px Ubuntu, sans-serif;
+    font-weight: bold;
+    text-align:center;
+  }
+  .textbox {
+    -webkit-box-shadow: 0 0 2px #8BC34A inset;
+    -moz-box-shadow: 0 0 2px #8BC34A inset;
+    -ms-box-shadow: 0 0 2px #8BC34A inset;
+    -o-box-shadow: 0 0 2px #8BC34A inset;
+    box-shadow: 0 0 2px #8BC34A inset;
+    background-color: #FFF;
+    border: 1px solid #8BC34A;
+    outline: none;
+    font-size:30px;
+    text-align:center;
+    padding:0.25em;
+  }
+  .inputbtns{
+    margin-top:5em;
+    text-align:center;
+  }
+    .button{
+    background-color: #F57C00;
+    color: white;
+    border: none;
+    color: &#39;white&#39;;
+    padding: 16px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+    cursor: pointer;
+  }
+  .waitmsg{
+    color:#F57C00;
+  }
+  .solvedtxt, .solvedwrd{
+    font-size:20px;
+    color: #E65100;
+  }
+  
+  input[type=number]::-webkit-inner-spin-button {
+  
+  opacity: 1;
+  }
+  
+  input[type=number]{	
+    padding:1vw;
+    font-size:3vw;
+    text-align:center;
+  }
+  </style>
+</head>
+
+<body>
+  <h1 class='heading'>Missing Alphabets</h1>
+  
+  <div class='inputbtns'>
+  <p style='color:#E65100'>Enter the word with hypen &#39;-&#39; for missing alphabets</p>
+  <input autofocus='autofocus' class='textbox' onkeyup='if (event.keyCode == 13) document.getElementById("investigate").click()' id='missed' type='text'/><br/><br/><br/><br/>
+  <input class='button' onclick='get_db()' id='investigate' type='button' value='Investigate'/><br/><br/><br/><br/>
+  <div class='waitmsg' id='waitmsg'></div><br/>
+  <p style='color:#E65100' id='firsttymNote'></p>
+  <div class='solvedtxt'>Solved:</div><br/>
+  <div class='solvedwrd' id='solvedword'></div>
+  </div>
+
+<script src="https://cdn.rawgit.com/mozilla/localForage/master/dist/localforage.js"></script>
+<script>
+function investigate(all_words){
+  var word = document.getElementById("missed").value;
+  var matching = 0;
+  var matched_words = [];
+  for (var i = 0; i < all_words.length; i++) {
+    var each_word = all_words[i][0];
+    if (word.length == each_word.length){
+      for (var j = 0; j < word.length; j++) {
+        if ((word[j] == '-') || (word[j] == each_word[j])){
+          matching = 1;
+        }else {
+          matching = 0;
+          break;
+        }
+      }
+      if (matching == 1){
+        matched_words.push(each_word);
+      }
+    }
+  }
+  
+  document.getElementById("waitmsg").innerHTML = "";
+  if (matched_words.length == 0){
+  document.getElementById("solvedword").innerHTML = "'I am Sorry Dear, No Matches Found'"
+  } else {
+  document.getElementById("solvedword").innerHTML = JSON.stringify(matched_words);
+  }
+}
+
+function set_db(all_words){
+  localforage.setDriver([
+  localforage.INDEXEDDB,
+  localforage.WEBSQL,
+  localforage.LOCALSTORAGE
+  ]).then(function() {
+    localforage.setItem('words_data', all_words);
+  });
+  get_db();
+}
+
+function get_db(){
+  var waittext = "<br/>Please wait a second...";
+  document.getElementById("waitmsg").innerHTML = waittext;
+  document.getElementById("solvedword").innerHTML = "";
+  
+  localforage.setDriver([
+  localforage.INDEXEDDB,
+  localforage.WEBSQL,
+  localforage.LOCALSTORAGE
+  ]).then(function() {
+    localforage.getItem('words_data').then(function (value) {
+      document.getElementById("firsttymNote").innerHTML = "";
+      investigate(value);
+    }).catch(function (err) {
+      document.getElementById("firsttymNote").innerHTML = "Note: For the first run, it might take 30 seconds...";
+      google.script.run.withSuccessHandler(set_db).get_db();
+    })
+  });
+}
+</script>
+</body>

@@ -1,0 +1,13 @@
+ptLyr = QgsVectorLayer('C:/Users/Debanjana/Desktop/testQgis/points.shp', 'points', 'ogr')
+QgsProject.instance().addMapLayer(ptLyr)
+
+ptLyr.startEditing()
+
+fet = QgsFeature()
+fet.setGeometry(QgsGeometry(QgsPoint(10,10)))
+fet.setAttributes([1])
+ptLyr.addFeatures([fet])
+
+ptLyr.commitChanges()
+iface.vectorLayerTools().stopEditing(ptLyr)
+print('done')

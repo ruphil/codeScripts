@@ -1,0 +1,5 @@
+<div style="text-align:center">
+<h3 id="errormsg">Enter the OTP sent to your Mail ID</h3><br/>
+<input id="otp" type="password" name="otp" placeholder="OTP"><br/><br/>
+<button type="button" onclick="checkOTP()">Log Me In!</button>
+</div>

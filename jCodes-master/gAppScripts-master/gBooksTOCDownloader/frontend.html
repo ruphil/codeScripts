@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <div style="text-align:center">
+    <span>gBooks Table of Contents Downloader</span><br/><br/>
+    
+    <input type="text" id="isbn" value="ISBN:8120343891"/>
+    <input type="button" value="Load" onclick="initialize()" />
+    <input type="button" value="bindFuncToNextButton" onclick="bindFuncToNextButton()" />
+    <a id="imgHREF" href="" target="_blank">Download</a>
+    
+    <br/><br/>   
+    
+    <div id="viewerCanvas" style="display: inline-block;width: 800px; height: 600px"></div>
+    </div>
+    <script type="text/javascript" src="https://www.google.com/books/jsapi.js"></script>
+    <script type="text/javascript">
+      google.books.load();
+
+      function initialize() {
+        var viewer = new google.books.DefaultViewer(document.getElementById('viewerCanvas'));
+        var isbn = document.getElementById('isbn').value;
+        viewer.load(isbn);
+      }
+      
+      function bindFuncToNextButton(){
+        var cssSelect = "#viewerCanvas > div > div:nth-child(1) > div:nth-child(2) > div:nth-child(17)";
+        var elem = document.querySelector(cssSelect);
+        elem.addEventListener("click", logURL);
+        console.log("binded");
+      }
+      
+      function logURL(){
+        var cssSelect = "#viewerCanvas > div > div:nth-child(1) > div.overflow-scrolling > div > div > div:nth-child(1) > div:nth-child(2) > div > div:nth-child(3) > img";
+        var elem = document.querySelector(cssSelect);
+        console.log(elem.src);
+        
+        var aLink = document.getElementById('imgHREF');
+        aLink.href = elem.src;
+        aLink.click();
+      }
+      
+      
+    </script>
+    
+    
+  </body>
+</html>
+
+

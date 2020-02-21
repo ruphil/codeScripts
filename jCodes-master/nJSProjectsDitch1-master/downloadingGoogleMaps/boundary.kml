@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="root_doc">
+<Schema name="outline" id="outline">
+	<SimpleField name="Id" type="int"></SimpleField>
+	<SimpleField name="Block_ID" type="string"></SimpleField>
+</Schema>
+<Folder><name>outline</name>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#outline">
+		<SimpleData name="Id">0</SimpleData>
+		<SimpleData name="Block_ID">D4</SimpleData>
+	</SchemaData></ExtendedData>
+      <Polygon><outerBoundaryIs><LinearRing><coordinates>77.5422023105255,12.9704373501551,0 77.542005482018,12.9502330945641,0 77.5214394534578,12.9504464206043,0 77.521660990211,12.9706273366812,0 77.5422023105255,12.9704373501551,0</coordinates></LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>
+</Folder>
+</Document></kml>

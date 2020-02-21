@@ -1,0 +1,141 @@
+<html>
+  <head>
+    <title>UPSC Cracker</title>
+    <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <style>
+      :root {
+          --main-text-color: rgb(200, 200, 200); 
+      }
+
+      body {
+          background: black;
+          color: var(--main-text-color);
+      }
+
+      .heading {
+          text-align: center;
+      }
+
+      table {
+          font-size: 40px;
+          width: 80%;
+          margin-left: auto;
+          margin-right: auto;
+          text-align: center;
+      }
+
+      .titles {
+          text-align: left;
+          cursor: pointer;
+      }
+
+      .titles:hover {
+          color: blue;
+      }
+
+      .titles:active {
+          color: red;
+      }
+
+      table, th, td {
+          border: 1px solid var(--main-text-color);
+      }
+
+      .ui-dialog {
+          background: black;
+      }
+
+      .ui-dialog-titlebar {
+          background: black;
+          color: var(--main-text-color);
+      }
+
+      .ui-dialog-content {
+          color: var(--main-text-color);
+          font-size: 20px;
+      }
+
+      ul {
+          text-align: justify;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <h1 class='heading'>Important Current Affairs Notes for UPSC Preparation</h1>
+
+    <table id='theData'>
+      <tr bordercolor='white'>
+        <th>S.No</th>
+        <th>Name</th>
+        <th>News Occurrence</th>
+        <th>Type</th>
+      </tr>
+    </table>
+
+    <div id="dialog" title=""></div>
+
+    <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+      var listURL = 'https://raw.githubusercontent.com/ruphil/upsc-cracker/master/actualContent/list.json';
+      $.get(listURL, function(dataJSON){
+          var data = JSON.parse(dataJSON).data;
+          // console.log(data);
+          data.sort((a, b) => parseFloat(b.occurrence) - parseFloat(a.occurrence));
+
+          for (var i = 0; i < data.length; i++){
+              var row = '<tr>';
+              var sNo = '<td>' + (i + 1) + '</td>';
+              var title = '<td class="titles" title="' + data[i].title + '" location=' + data[i].fileLocation + '>' + data[i].title + '</td>';
+              var occurence = '<td>' + data[i].occurrence + '</td>';
+              var type = '<td>' + data[i].type + '</td>';
+              row += sNo + title + occurence + type + '</tr>';
+              
+              $("#theData").append(row);
+          }
+
+          $('.titles').click(function(){
+              var w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+              var h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+              console.log(w,h);
+              var title = $(this).attr('title');
+              var location = $(this).attr('location');
+              // console.log(location);
+              var sectionURL = 'https://raw.githubusercontent.com/ruphil/upsc-cracker/master/actualContent/files/' + location + '.xml';
+              console.log(sectionURL);
+              $.get(sectionURL, function(dataXML){
+
+                  $('.ui-dialog-title').html(title);
+                  $('#dialog').html(dataXML);
+
+                  $("#dialog").dialog({
+                      minWidth: w * 0.8,
+                      maxWidth: w * 0.8,
+                      minHeight: h * 0.8,
+                      maxHeight: h * 0.8
+                  });
+                  $("#dialog").dialog("open");
+                  
+              });
+          });
+      });
+
+      $( "#dialog" ).dialog({
+          autoOpen: false,
+          show: {
+              effect: "blind",
+              duration: 1000
+          },
+          hide: {
+              effect: "explode",
+              duration: 1000
+          }
+          });
+
+          $( "#opener" ).on( "click", function() {
+          $( "#dialog" ).dialog( "open" );
+      });
+    </script>
+  </body>
+</html>

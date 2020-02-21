@@ -1,0 +1,98 @@
+<head>
+	<link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet'/>
+	<style>
+      body { 
+		background-color:#C5E1A5;
+	 }
+      .heading{
+		top:0.5em;
+		color:#558B2F;
+		font: 500 62px Ubuntu, sans-serif;
+		font-weight: bold;
+		text-align:center;
+     }
+    .textbox {
+        -webkit-box-shadow: 0 0 2px #ED1C24 inset;
+        -moz-box-shadow: 0 0 2px #ed1c24 inset;
+        -ms-box-shadow: 0 0 2px #ed1c24 inset;
+        -o-box-shadow: 0 0 2px #ed1c24 inset;
+        box-shadow: 0 0 2px #ED1C24 inset;
+        background-color: #FFF;
+        border: 1px solid #ED1C24;
+        outline: none;
+		font-size:30px;
+		text-align:center;
+		padding:0.25em;
+    }
+      .inputbtns{
+		margin-top:5em;
+		text-align:center;
+	}
+		.button{
+		background-color: #DCEDC8;
+        color: white;
+        border: none;
+        color: #4CAF50;
+        padding: 16px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        -webkit-transition-duration: 0.4s; /* Safari */
+        transition-duration: 0.4s;
+        cursor: pointer;
+	}
+      .waitmsg{
+			color:#558B2F;
+		}
+      .solvedtxt, .solvedwrd{
+			font-size:20px;
+			color: #33691E;
+		}
+	</style>
+</head>
+
+<body>
+  <h1 class='heading'>Jumbled Solver</h1>
+  
+  <div class='inputbtns'>
+    <input autofocus='autofocus' class='textbox' onkeyup='if (event.keyCode == 13) document.getElementById("arrange").click()' id='jumbled' name='jumbled' type='text'/><br/><br/><br/><br/>
+    <input class='button' onclick='arrange()' id='arrange' type='button' value='Arrange'/><br/><br/><br/><br/>
+    <div class='waitmsg' id='waitmsg'></div><br/>
+    <div class='solvedtxt'>Solved:</div><br/>
+    <div class='solvedwrd' id='solvedword'></div>
+  </div>
+  
+<script>
+function characterCount(word, character) {
+   var count = 0;
+    for (var i = 0; i < word.length; i++) {
+       if (word[i] === character) {
+           count++;
+       }
+  }
+  return count;
+}
+function onSuccess(word){
+   document.getElementById("solvedword").innerHTML = word;
+   document.getElementById("waitmsg").innerHTML = "";
+}
+function arrange(){
+    var waittext = "<br/>Please wait 10 seconds...";
+    document.getElementById("waitmsg").innerHTML = waittext;
+    var word = document.getElementById("jumbled").value;
+    
+    var stringBase = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','_'];
+    var countObject = {} ;
+    
+    var countStr = ""
+    for (var i = 0, l = stringBase.length; i < l; i++) {
+      var currentChar = stringBase[i];
+      countStr += characterCount(word, currentChar).toString();
+    }
+    google.script.run.withSuccessHandler(onSuccess).arrange(countStr);
+}
+</script>
+
+</body>

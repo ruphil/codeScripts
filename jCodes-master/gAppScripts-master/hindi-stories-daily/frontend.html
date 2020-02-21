@@ -1,0 +1,22 @@
+<body>
+<h3 style="display: inline;">Hindi Stories Daily</h3><br/><br/>
+
+<strong>Book Title: <?= raw_row[0][0] ?></strong><br/>
+<strong>Story Title: <?= raw_row[0][1] ?></strong><br/><br/>
+<strong>Story: </strong><br/>
+<div style="line-height: 150%;">
+<? var paras = raw_row[0][2].split("।।")
+for (var i = 0;i < paras.length - 1; i++){ ?>
+    <p>&emsp;&emsp;<?= paras[i] ?><span>।</span></p>
+<? } ?>
+</div>
+<strong>An Humble Attempt made by Google Translate:</strong><br/>
+
+<? 
+var each_wrd_paras = each_wrd_trans_paras.split("।।")
+var full_paras = full_trans_paras.split("।।")
+for (var i = 0;i < each_wrd_paras.length - 1; i++){ ?>
+    <p>&emsp;&emsp;<?= each_wrd_paras[i] ?></p>
+    <p>&emsp;&emsp;<?= full_paras[i] ?></p>
+<? } ?>
+</body>

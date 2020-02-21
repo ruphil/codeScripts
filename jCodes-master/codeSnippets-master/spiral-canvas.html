@@ -1,0 +1,151 @@
+<html> 
+
+<head> 
+
+<title>Canvas</title> 
+
+</head> 
+
+ 
+
+<body> 
+
+<canvas id="myCanvas" width="600" height="600" style="border:5px solid #330044;"></canvas> 
+
+<canvas id="color" width="200" height="600" style="border:4px solid #330044;"></canvas> 
+
+<script> 
+
+ 
+
+var ctx = myCanvas.getContext('2d'); 
+
+var x=300; 
+
+var y=300; 
+
+var t=0; 
+
+var a=50; 
+
+var col="green"; 
+
+ 
+
+window.addEventListener("keypress", changecol); 
+
+ 
+
+function moverect(){ 
+
+ctx.fillStyle=col; 
+
+x=300-a*Math.log(t)*Math.cos(t); 
+
+y=300-a*Math.log(t)*Math.sin(t); 
+
+ctx.beginPath(); 
+
+ctx.arc(x,y,2,0,2*Math.PI); 
+
+ctx.fill(); 
+
+t=t+0.05; 
+
+if (t>250){ 
+
+clearInterval(interval); 
+
+alert("Enof, get back to work, papi"); 
+
+} 
+
+} 
+
+ 
+
+interval = setInterval(function(){moverect();},20); 
+
+ 
+
+var text="hello" + "\n" + "world"; 
+
+ 
+
+var clr=color.getContext('2d'); 
+
+clr.font = "20px Arial"; 
+
+clr.fillText("Choose Color:",10,20); 
+
+clr.fillText("(Press Nos - 1 to 5)",10,40); 
+
+ 
+
+clr.fillText("1 - Blue",10,80); 
+
+clr.fillText("2 - Brown",10,120); 
+
+clr.fillText("3 - Gold",10,160); 
+
+clr.fillText("4 - Red",10,200); 
+
+clr.fillText("5 - Silver",10,240); 
+
+ 
+
+function changecol(e){ 
+
+console.log(e.keyCode); 
+
+switch (e.keyCode){ 
+
+case 49:col="blue" 
+
+break; 
+
+case 50:col="Brown" 
+
+break; 
+
+case 51:col="Gold" 
+
+break; 
+
+case 52:col="Red" 
+
+break; 
+
+case 53:col="Silver" 
+
+break; 
+
+default:  
+
+clr.fillStyle="Red"; 
+
+clr.fillText("Just try 1 to 5, papi",10,280); 
+
+clr.fillText("dont have much time ",10,320); 
+
+clr.fillText("have to read",10,360); 
+
+ 
+
+ 
+
+} 
+
+ 
+
+} 
+
+ 
+
+</script> 
+
+</body> 
+
+</html> 
+
+ 

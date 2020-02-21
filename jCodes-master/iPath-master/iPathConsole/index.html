@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<head>
+    <title>iPath Console</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/hot-sneaks/jquery-ui.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+<div style="text-align:center">
+    <br/><h3 style="display: contents;">iPath Console - Minimal GUI</h3> &emsp;
+    <input type="text" id="nQuery" style="width:700px" autofocus/> &emsp;
+    <select id="tabList">
+        <option selected>New Tab</option>
+    </select>
+    <br/><br/>
+</div>
+
+<span id="tabIdRemainder" style="display:none">1</span>
+
+<div id="tabs">
+    <ul></ul>
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-3.4.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script>
+    $(function () {
+        var socket = io();
+        $('input').keyup(function (event) {
+            if (event.keyCode == 13 && !event.shiftKey) {
+                
+                var nQuery = $('#nQuery').val();
+                var tabID = 0;
+
+                if($('#tabList').find(":selected").text() == 'New Tab'){
+                    tabID = parseInt(document.getElementById("tabIdRemainder").innerText);
+                    
+                    var statusDiv = `
+                        <div class="card border-success mb-0" style="max-width: 18rem;position:fixed;right:100px">
+                        <div class="card-header">Status</div>
+                        <div class="card-body">
+                            <p id="status-${tabID}" class="card-text"></p>
+                        </div>
+                        </div>
+                    `;
+
+                    $('#tabList').append($("<option></option>")
+                    .attr("value", tabID)
+                    .attr('selected', 'selected')
+                    .text("Tab-" + tabID));
+
+                    increaseTabCount();
+
+                    $("div#tabs ul").append(
+                        "<li id='li-" + tabID +"'><a href='#tab-" + tabID + "'>" + "Tab-" + tabID + "</a><span id='trash-" + tabID + "' class='glyphicon glyphicon-trash'></span><br/><span id='loading-" + tabID + "' class='glyphicon glyphicon-time'></span></li>"
+                    );
+
+                    $("div#tabs").append(
+                        "<div id='tab-" + tabID + "' style='min-height:200px;max-height: 450px;overflow-y:auto'>" + statusDiv + "</div>"
+                    );
+                    
+                    $("div#tabs").tabs("refresh");
+                    $("#tabs").tabs("option", "active", $("div#tabs ul li").length - 1);
+                    
+                } else {
+                    tabID = $('#tabList').find(":selected").val();
+                }
+
+                socket.emit('nQueryNtabID', [nQuery, tabID]);
+                $('#tab-' + tabID).html($('#tab-' + tabID).html() + "<b style='color:red'>" + new Date().toLocaleTimeString() + " 💻 ← " + nQuery + '</b><br/>');
+                
+                $('#nQuery').val('');
+            }
+        });
+        
+        socket.on('nResponseNtabID', function(nResponseNtabID){
+            var nResponse = nResponseNtabID[0];
+            var tabID = nResponseNtabID[1];
+
+            var statusDiv = `
+                <div class="card border-success mb-0" style="max-width: 18rem;position:fixed;right:100px">
+                <div class="card-header">Status</div>
+                <div class="card-body">
+                    <p id="status-${tabID}" class="card-text"></p>
+                </div>
+                </div>
+            `;
+
+            if ($('#li-' + tabID).length && $('#tab-' + tabID).length){
+                // both 'li' and 'div' are availabe, only updations
+                $('#tab-' + tabID).html($('#tab-' + tabID).html() + "<b>" + new Date().toLocaleTimeString() + "</b>" + " 💻 → " + nResponse + "<br/>");
+                
+                $('#tab-' + tabID).scrollTop($('#tab-' + tabID)[0].scrollHeight);
+
+                $('#loading-' + tabID).addClass( "glyphicon glyphicon-time" );
+
+            } else if (!$('#li-' + tabID).length && !$('#tab-' + tabID).length){
+                // both 'li' and 'div' are not availabe (tab has been deleted, recreation is in progress)
+
+                $("div#tabs ul").append(
+                    "<li id='li-" + tabID +"'><a href='#tab-" + tabID + "'>" + "Tab-" + tabID + "</a><span id='trash-" + tabID + "' class='glyphicon glyphicon-trash'></span><br/><span id='loading-" + tabID + "' class='glyphicon glyphicon-time'></span></li>"
+                );
+
+                $("div#tabs").append(
+                    "<div id='tab-" + tabID + "' style='min-height:200px;max-height: 450px;overflow-y:auto'>" + statusDiv + "</div>"
+                );
+                
+                $("div#tabs").tabs("refresh");
+
+                $('#tab-' + tabID).html($('#tab-' + tabID).html() + "<b>" + new Date().toLocaleTimeString() + "</b>" + " 💻 → " + nResponse + "<br/>");
+                
+                $('#tab-' + tabID).scrollTop($('#tab-' + tabID)[0].scrollHeight);
+
+                $('#loading-' + tabID).addClass( "glyphicon glyphicon-time" );
+            }
+        });
+
+        socket.on('overrideStatus', function(msgNtabID){
+            var msg = msgNtabID[0];
+            var tabID = msgNtabID[1];
+            $('#status-' + tabID).html(msg + "<br/>");
+        });
+
+        socket.on('appendStatus', function(msgNtabID){
+            var msg = msgNtabID[0];
+            var tabID = msgNtabID[1];
+            $('#status-' + tabID).html($('#status-' + tabID).html() + msg + "<br/>");
+        });
+
+        socket.on('nResponseEnd', function(tabID){
+            $('#loading-' + tabID).removeClass( "glyphicon glyphicon-time" );
+        });
+
+        socket.on('clrQry', function(nullMsg){
+            $('#nQuery').val('');
+        });
+    });
+</script>
+
+<script>
+  $( function() {
+    $( "#tabs" ).tabs();
+  });
+
+  $(document).on('click','#tabs ul li span', function(e) {
+    var id = e.target.id.split('-')[1];
+    var liId = '#li-' + id;
+    var divId = '#tab-' + id;
+    // console.log(divId);
+    $(liId).remove();
+    $(divId).remove();
+    $(`#tabList option[value='${id}']`).remove();
+    $('#nQuery').focus();
+  });
+
+  $('select').on('change', function() {
+    $('#nQuery').focus();
+  });
+
+//   $(document).on('click','#tabs ul li a', function(e) {
+//       console.log($("#tabs").tabs('option', 'active'));
+//   });
+</script>
+
+<script>
+function increaseTabCount(){
+    var requestCount = parseInt(document.getElementById("tabIdRemainder").innerText);
+    document.getElementById("tabIdRemainder").innerText = requestCount + 1;
+}
+
+</script>
+
+</body>
+</html>

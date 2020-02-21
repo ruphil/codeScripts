@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body bgcolor="orange">
+    <h3 style="color:white">oppExplorer</h3>
+    <div id="actualContainer" style="text-align:center;color:white">
+    
+    </div>
+    
+    <script>
+      var username = sessionStorage.getItem("username");
+      var password = sessionStorage.getItem("password");
+      
+      google.script.run.withSuccessHandler(whichscreen).evaluatesessionRtryLoggingIn([username, password]);
+      
+      function whichscreen(e){
+        var console;
+        e ? console = "main": console = "login";
+        google.script.run.withSuccessHandler(render).getConsole(console);
+      }
+      
+      function render(e){
+        document.getElementById('actualContainer').innerHTML = e;
+      }
+      
+      function tryLoggingIn(){
+        var username = document.getElementById('username').value;
+        var password = document.getElementById('password').value;
+        google.script.run.withSuccessHandler(whichscreen).evaluatesessionRtryLoggingIn([username, password]);
+        sessionStorage.setItem("username", username);
+        sessionStorage.setItem("password", password);
+      }
+    </script>
+    
+  </body>
+</html>

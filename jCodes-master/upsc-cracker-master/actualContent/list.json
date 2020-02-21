@@ -1,0 +1,16 @@
+{
+    "data": [
+        {
+            "title": "IUCN Red List",
+            "type": "classifications",
+            "fileLocation": "10001",
+            "occurrence": 6
+        }, 
+        {
+            "title": "One Nation, One Election",
+            "type": "ideas",
+            "fileLocation": "10002",
+            "occurrence": 3
+        }
+    ]
+}

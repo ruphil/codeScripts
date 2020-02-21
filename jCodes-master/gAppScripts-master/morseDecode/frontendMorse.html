@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      .theTorch, .controlButtons{
+        text-align: center;
+      }
+      .controlInputs {
+        font-size: 250%;
+        color: green;
+        padding:5px 15px; 
+        background:#FFF; 
+        border:0 none;
+        cursor:pointer;
+        -webkit-border-radius: 5px;
+        border-radius: 5px;
+      }
+      #loadQuesStatus, #decodingStatus{
+        font-size: 350%;
+        text-align: center;
+        color: white;
+      }
+      #decodedMsg{
+        font-size: 350%;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+  </head>
+  <body>
+  <h1 align="center" style="color:white;font-size: 600%;">-- --- .-. ... . <br/> -.. . -.-. --- -.. .</h1>
+  <div id="thePhrase" style="display:none"></div>
+  <div class="theTorch">
+    <svg width="300" height="300">
+      <circle id="lightsource" cx="150" cy="150" r="145" stroke="green" stroke-width="4" fill="white" />
+    </svg>
+  </div><br/><br/><br/>
+  <input type="text" id="decodedMsg" placeholder="Start Decoding ..."/><br/><br/>
+  <div class="controlButtons">
+    <input class="controlInputs" type="button" onclick="handleTorch()" value="... - .- .-. -"/>&emsp;&emsp;
+    <input class="controlInputs" type="button" onclick="resetPressed()" value=".-. . ... . -"/>&emsp;&emsp;
+    <input class="controlInputs" type="button" onclick="checkMsg()" value="-.-. .... . -.-. -.-"/>&emsp;&emsp;
+    <input class="controlInputs" type="button" onclick="loadNextQuestion()" value="-. . -..- -"/>
+  </div><br/><br/>
+  <div id="decodingStatus"></div><br/>
+  <div id="loadQuesStatus"></div><br/>
+  <div id="statusBar" class="statusBar" style="border: 2px solid white; width:80%; margin: 0 auto;padding:5px;color:white;font-size: 350%;">
+    <div>Actual Message: <span id="actualMsg"></span></div><br/>
+    <div>Your Message: <span id="yourMsg"></span></div>
+  </div><br/><br/>
+  
+  <script src="https://raw.githack.com/ruphil/BLOGGER-GAS/master/morseDecode/morse.js"></script>
+  <script>
+    var red = 250, green = 200, blue = 0;
+    window.onload = function(){
+      document.body.style.backgroundColor = "rgb("+ red +", "+ green +", "+ blue +")";
+      document.getElementById('statusBar').style.display = 'none';
+      loadQuestion();
+    }
+    
+    var codeArry = [];
+    function setPhrase(phrase){
+      document.getElementById('thePhrase').innerText = phrase;
+      
+      for (var i = 0; phrase.length; i++){
+        try{
+          codeArry.push(morse.morseEncode(phrase[i]));
+        } catch(err){
+          break;
+        }
+      }
+      
+      var i = codeArry.length;
+      do {
+        codeArry.splice(i, 0, " ");
+      } while (i--)
+      codeArry = codeArry.join("").split("");
+//      console.log(codeArry);
+      
+      document.getElementById('loadQuesStatus').innerText = "";
+    }
+    
+    function loadQuestion(){
+      document.getElementById('loadQuesStatus').innerText = "Loading Question ...";
+      google.script.run.withSuccessHandler(setPhrase).getPhrase();
+    }
+    
+    // Controlling The Torch
+    var oneUnit = 500;
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    var resetPressedVal = 0;
+    function resetPressed(){
+      resetPressedVal = 1;
+      document.getElementById('statusBar').style.display = 'none';
+      document.getElementById('actualMsg').innerText = "";
+      document.getElementById('yourMsg').innerText = "";
+      document.getElementById('decodingStatus').innerText = "";
+    }
+    
+    function loadNextQuestion(){
+      loadQuestion();
+      document.getElementById('statusBar').style.display = 'none';
+      document.getElementById('loadQuesStatus').innerText = "Loading Next Question ...";
+      document.getElementById('actualMsg').innerText = "";
+      document.getElementById('yourMsg').innerText = "";
+      document.getElementById('decodedMsg').value = "";
+      document.getElementById('decodingStatus').innerText = "";
+    }
+    
+    function checkMsg(){
+      document.getElementById('statusBar').style.display = 'block';
+      document.getElementById('actualMsg').innerText = document.getElementById('thePhrase').innerText;
+      document.getElementById('yourMsg').innerText = document.getElementById('decodedMsg').value;
+      document.getElementById('decodingStatus').innerText = "You have decoded " + assessDecoding() + " % of your message";
+    }
+    
+    function assessDecoding(){
+      var actualMsg = document.getElementById('thePhrase').innerText;
+      var yourMsg = document.getElementById('decodedMsg').value;
+      
+      var totalToBDecoded = actualMsg.length;
+      var decodedLen = yourMsg.length;
+      var totalDecoded = 0;
+      
+      var actualMsgArry = actualMsg.split("");
+      
+      Array.prototype.contains = function(obj) {
+        var i = this.length;
+        while (i--) {
+            if (this[i].toUpperCase() == obj.toUpperCase()) {
+                return [true, i];
+            }
+        }
+        return [false, 0];
+      }
+      
+      for (var i = 0; i < decodedLen; i++){
+        var contnPos = actualMsgArry.contains(yourMsg[i]);
+        if (contnPos[0]){
+          actualMsgArry.splice(contnPos[1], 1);
+          totalDecoded += 1;
+        }
+      }
+      
+      var assessedValue = Math.round(totalDecoded / totalToBDecoded * 100);
+      return assessedValue;
+    }
+    
+    async function handleTorch(){
+      document.getElementById('statusBar').style.display = 'none';
+      document.getElementById("decodedMsg").focus({preventScroll:false});
+      resetPressedVal = 0;
+      for(var i = 0; i < codeArry.length; i++){
+        if (resetPressedVal){
+          resetPressedVal = 0;
+          break;
+        }
+        
+        switch (codeArry[i]){
+          case '.':
+            document.getElementById("lightsource").setAttribute("fill", "yellow");
+            await sleep(oneUnit);
+            document.getElementById("lightsource").setAttribute("fill", "white");
+            await sleep(oneUnit);
+            break;
+          case '-':
+            document.getElementById("lightsource").setAttribute("fill", "yellow");
+            await sleep(2 * oneUnit);
+            document.getElementById("lightsource").setAttribute("fill", "white");
+            await sleep(oneUnit);
+            break;
+          case ' ':
+            document.getElementById("lightsource").setAttribute("fill", "white");
+            await sleep(oneUnit);
+            document.getElementById("lightsource").setAttribute("fill", "white");
+            await sleep(oneUnit);
+            break;
+        }
+      }
+    }
+
+// Background Color Changing Functions
+    function setBGColor(){
+      var color = "rgb("+ red +", "+ green +", "+ blue +")";
+      document.body.style.backgroundColor = color;
+    }
+
+    var redDir = 1, greenDir = 1, blueDir = 1;
+    function changeColor(){
+      if(red <= 50 || red >= 255) redDir *= -1;
+      if(green <= 50 || green >= 255) greenDir *= -1;
+      if(blue <= 50 || blue >= 255) blueDir *= -1;
+      
+      red = Math.abs(Math.round((red + Math.random() * 10 * redDir)));
+      green = Math.abs(Math.round((green + Math.random() * 10 * greenDir)));
+      blue = Math.abs(Math.round((blue + Math.random() * 10 * blueDir)));
+      setBGColor();
+    }
+    
+    setInterval(function(){ changeColor(); }, 200);
+        
+  </script>
+  </body>
+</html>
+
+
