@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<Pane fx:controller="kotlinFXProjects.gifCreator.MainWindowController" maxHeight="-Infinity" maxWidth="-Infinity"
+      minHeight="-Infinity" minWidth="-Infinity" prefHeight="343.0" prefWidth="368.0"
+      xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1">
+   <Button fx:id="imageButton" layoutX="53.0" layoutY="41.0" mnemonicParsing="false" text="Open Image File"/>
+   <Label fx:id="imageLabel" layoutX="217.0" layoutY="45.0" text="Image File" userData="."/>
+
+   <Button fx:id="doodleButton" layoutX="50.0" layoutY="93.0" mnemonicParsing="false" text="Open Doodle File"/>
+   <Label fx:id="doodleLabel" layoutX="208.0" layoutY="97.0" text="Doodle Image" userData="."/>
+
+   <Label layoutX="56.0" layoutY="149.0" text="Time Inverval (ms)"/>
+   <TextField fx:id="timeInterval" layoutX="173.0" layoutY="145.0"/>
+
+   <Label layoutX="58.0" layoutY="200.0" text="Loop Continously"/>
+   <ComboBox fx:id="loopBool" layoutX="174.0" layoutY="196.0" prefWidth="150.0"/>
+
+   <Button fx:id="startGIF" layoutX="148.0" layoutY="292.0" mnemonicParsing="false" text="Weave GIF"/>
+   <ProgressBar fx:id="progressBar" layoutX="21.0" layoutY="251.0" prefHeight="18.0" prefWidth="326.0" progress="0.0"/>
+</Pane>
