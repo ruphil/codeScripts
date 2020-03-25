@@ -1,0 +1,8 @@
+node_modules/
+package-lock.json
+ChromeProfile/
+04 validatingDownloadedRawFiles/05 filesNotFound.txt
+Databases/tStock.db
+Databases/tStock.db-journal
+Databases/tStock.db
+Databases/tStock.db
