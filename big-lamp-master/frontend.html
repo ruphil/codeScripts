@@ -1,0 +1,304 @@
+<body style="margin:0px">
+<div style="border: 2px solid blue;background-color:blue;color:white"><h2 style="margin:10px">Big-Lamp</h2></div>
+
+<? if (phase == 0) { ?>
+<div style="text-align:center">
+<h3>Enter Your UserName and PassWord and Click Login</h3><br/>
+UserName: <input id="user" type="text"><br/><br/>
+PassWord: <input id="passwd" type="password"><br/><br/>
+<button type="button" onclick="gotophaseone()">Log Me In!</button>
+</div>
+<script>
+function gotophaseone(){
+  window.open("<?= url ?>?user=" + document.getElementById("user").value + "&pass=" + document.getElementById("passwd").value + "&phase=1", "_top");
+  }
+</script>
+<? }else if (phase == 1) { ?>
+<? 
+var sheet = SpreadsheetApp.openById('105mQKulJrdbSR5-lSh84aLRFki9SU4n2lPz8-iZK66U').getSheetByName("big-lamp");
+var lastRow = sheet.getLastRow();
+var data = sheet.getRange(2, 2, lastRow - 1, 2).getValues(); 
+
+var dict = {};
+var macid_unique_first_user = [];
+for( var i = 0; i < data.length; i++ ) {
+    var macidtemp = data[i][0];
+    var macidStr = macidtemp.toString();
+
+    if (!dict[macidStr]) {
+        dict[macidStr] = true;
+        macid_unique_first_user.push([data[i][0], data[i][1]]);
+    }
+}
+
+?>
+<div style="text-align:center">
+<h3>Unique MACID + First UserName</h3><br/>
+    <table border="1" align="center">
+    <tr><th>MACID</th><th>USER</th></tr>
+      <? for (var i = 0; i < macid_unique_first_user.length; i++) { ?>
+        <tr>
+          <? for (var j = 0; j < macid_unique_first_user[i].length; j++) { ?>
+            <? if (j == 0){ ?>
+            <td><a href="#" id="<?= macid_unique_first_user[i][j] ?>" onclick="gotophasetwo(this)"><?= macid_unique_first_user[i][j] ?></a></td>
+            <? } else { ?>
+            <td><?= macid_unique_first_user[i][j] ?></td>
+            <? } ?>
+          <? } ?>
+        </tr>
+      <? } ?>
+    </table>
+</div>
+<script>
+function gotophasetwo(e){
+  window.open("<?= url ?>" + "?user=controller&pass=philosopher&phase=2&macid=" + e.id, "_top");
+}
+</script>
+<? }else if (phase == 2 && initial) { 
+var sheet = SpreadsheetApp.openById('105mQKulJrdbSR5-lSh84aLRFki9SU4n2lPz8-iZK66U').getSheetByName("big-lamp");
+var lastRow = sheet.getLastRow();
+var MACIdInstances = sheet.getRange(1, 2, lastRow, 1).getValues();
+
+// counting the number of Current MAC ID occurrence
+var counts = 0;
+var last_macid_occurence = 1;
+for( var i = 0; i < MACIdInstances.length; i++ ) {
+    var macidtemp = MACIdInstances[i][0].toString();
+    if (macidtemp == macid){
+      counts++;
+      last_macid_occurence = i + 1;
+    }
+}
+
+var last_data_currentmacid = sheet.getRange(last_macid_occurence, 1, 1, 5).getValues();
+
+var imgfileStr = DriveApp.getFileById(last_data_currentmacid[0][3]).getBlob().getDataAsString();
+base64 = "data:image/jpeg;base64," + imgfileStr;
+
+?>
+<pre><h2 style="text-align:center">
+MACID: <?= macid ?>    ServerTime: <input id="servertime" type="datetime-local" name="servertime" value="<?= last_data_currentmacid[0][0] ?>" onchange="changeServerTime()">    UserName: <?= last_data_currentmacid[0][2] ?><br/>
+Snap: <input id="number" type="number" value="<?= counts ?>" onchange="changeNumber()" autofocus> out of <?= counts ?>    SnapTime: <?= last_data_currentmacid[0][4] ?>    <a onclick="gotophasethree()" href="#">BULK VIEW</a>
+</h2>
+<center><img id="thesnap" src="" alt="thesnap" width="98%"/></center>
+</pre>
+
+<script>
+window.onload = function setSRC(){
+document.getElementById("thesnap").src = <?= base64 ?>;
+}
+
+function changeServerTime(){
+  var srvrtym = document.getElementById("servertime").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&servertime=" + srvrtym, "_top");
+}
+
+function changeNumber(){
+  var num = document.getElementById("number").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&number=" + num, "_top");
+}
+
+function gotophasethree(){
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=1", "_top");
+}
+</script>
+
+<? }else if (phase == 2 && servertimebool) { 
+var sheet = SpreadsheetApp.openById('105mQKulJrdbSR5-lSh84aLRFki9SU4n2lPz8-iZK66U').getSheetByName("big-lamp");
+var lastRow = sheet.getLastRow();
+var MACIdInstances = sheet.getRange(1, 2, lastRow, 1).getValues();
+var Servertym = sheet.getRange(1, 1, lastRow, 1).getValues();
+
+// counting the number of Current MAC ID occurrence
+var counts = 0;
+var num_b = 1;
+var numbertemp = 1;
+var occured_step = 1;
+for( var i = 0; i < MACIdInstances.length; i++ ) {
+    var macidtemp = MACIdInstances[i][0].toString();
+    if (macidtemp == macid){
+      num_b = ++counts;
+      if (servertime.substring(0,13) == Servertym[i][0].toString().substring(0,13)){
+      occured_step = i + 1;
+      numbertemp = num_b;
+      }
+    }
+}
+
+var data_servertym_based = sheet.getRange(occured_step, 1, 1, 5).getValues();
+
+var imgfileStr = DriveApp.getFileById(data_servertym_based[0][3]).getBlob().getDataAsString();
+base64 = "data:image/jpeg;base64," + imgfileStr;
+
+?>
+<pre><h2 style="text-align:center">
+MACID: <?= macid ?>    ServerTime: <input id="servertime" type="datetime-local" name="servertime" value="<?= data_servertym_based[0][0] ?>" onchange="changeServerTime()">    UserName: <?= data_servertym_based[0][2] ?><br/>
+Snap: <input id="number" type="number" value="<?= numbertemp ?>" onchange="changeNumber()" autofocus> out of <?= counts ?>    SnapTime: <?= data_servertym_based[0][4] ?>    <a onclick="gotophasethree()" href="#">BULK VIEW</a>
+</h2>
+<center><img id="thesnap" src="" alt="thesnap" width="98%"/></center>
+</pre>
+
+<script>
+window.onload = function setSRC(){
+document.getElementById("thesnap").src = <?= base64 ?>;
+}
+
+function changeServerTime(){
+  var srvrtym = document.getElementById("servertime").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&servertime=" + srvrtym, "_top");
+}
+
+function changeNumber(){
+  var num = document.getElementById("number").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&number=" + num, "_top");
+}
+
+function gotophasethree(){
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=1", "_top");
+}
+</script>
+
+<? }else if (phase == 2 && numberbool) { 
+var sheet = SpreadsheetApp.openById('105mQKulJrdbSR5-lSh84aLRFki9SU4n2lPz8-iZK66U').getSheetByName("big-lamp");
+var lastRow = sheet.getLastRow();
+var MACIdInstances = sheet.getRange(1, 2, lastRow, 1).getValues();
+
+// counting the number of Current MAC ID occurrence
+var counts = 0;
+var num_b = 1;
+var occured_step = 1;
+for( var i = 0; i < MACIdInstances.length; i++ ) {
+    var macidtemp = MACIdInstances[i][0].toString();
+    if (macidtemp == macid){
+      num_b = ++counts;
+      if (number == num_b){
+      occured_step = i + 1;
+      }
+    }
+}
+
+var data_number_based = sheet.getRange(occured_step, 1, 1, 5).getValues();
+
+var imgfileStr = DriveApp.getFileById(data_number_based[0][3]).getBlob().getDataAsString();
+base64 = "data:image/jpeg;base64," + imgfileStr;
+
+?>
+<pre><h2 style="text-align:center">
+MACID: <?= macid ?>    ServerTime: <input id="servertime" type="datetime-local" name="servertime" value="<?= data_number_based[0][0] ?>" onchange="changeServerTime()">    UserName: <?= data_number_based[0][2] ?><br/>
+Snap: <input id="number" type="number" value="<?= number ?>" onchange="changeNumber()" autofocus> out of <?= counts ?>    SnapTime: <?= data_number_based[0][4] ?>    <a onclick="gotophasethree()" href="#">BULK VIEW</a>
+</h2>
+<center><img id="thesnap" src="" alt="thesnap" width="98%"/></center>
+</pre>
+
+<script>
+window.onload = function setSRC(){
+document.getElementById("thesnap").src = <?= base64 ?>;
+}
+
+function changeServerTime(){
+  var srvrtym = document.getElementById("servertime").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&servertime=" + srvrtym, "_top");
+}
+
+function changeNumber(){
+  var num = document.getElementById("number").value;
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=2&macid=<?= macid ?>&number=" + num, "_top");
+}
+
+function gotophasethree(){
+  window.open("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=1", "_top");
+}
+</script>
+
+<? }else if (phase == 3) { 
+
+var sheet = SpreadsheetApp.openById('105mQKulJrdbSR5-lSh84aLRFki9SU4n2lPz8-iZK66U').getSheetByName("big-lamp");
+var lastRow = sheet.getLastRow();
+var MACIdInstances = sheet.getRange(1, 2, lastRow, 1).getValues();
+
+// counting the number of Current MAC ID occurrence
+var counts = 0;
+var last_row_mac_id = 1;
+for( var i = 0; i < MACIdInstances.length; i++ ) {
+    var macidtemp = MACIdInstances[i][0].toString();
+    if (macidtemp == macid){
+      ++counts;
+      last_row_mac_id = i + 1;
+    }
+}
+
+var user_name = sheet.getRange(last_row_mac_id, 3, 1, 1).getValues();
+
+var endtemp = parseInt(start) + 17;
+var end = (counts < endtemp) ? counts:endtemp;
+var query_start = last_row_mac_id;
+?>
+<pre><h3 style="text-align:center">MACID: <?= macid ?>    UserName: <?= user_name[0][0] ?>    Set: <?= start ?> to <?= end ?> (OF <?= counts ?>)    <a href="#" onclick="movetoprevious()">Previous</a>  <a href="#" onclick="movetonext()">Next</a></h3></pre>
+<center>
+<?
+// making a new data table
+var datanumber = start;
+var fileidmac = [];
+var imageid = 9990001;
+var instancetostart_togetdata_fromlast = 1;
+while (datanumber < (end + 1)){
+  var dataQuery = sheet.getRange(query_start, 1, 1, 5).getValues();
+  var macidtemp = dataQuery[0][1].toString();
+    if (macidtemp == macid){
+      if(instancetostart_togetdata_fromlast > (start - 1)){
+        fileidmac.push(dataQuery[0][3]);
+      
+?>
+  <img id="<?= imageid ?>" src="#" alt="thesnap" title="ServerTime: <?= dataQuery[0][0] ?>; SystemTime: <?= dataQuery[0][4] ?>" width="30%"/>
+<?
+      imageid++;
+      datanumber++;
+      }
+      instancetostart_togetdata_fromlast++;
+    }
+  query_start--;
+}
+?>
+</center>
+<script>
+window.onload = function (){
+<?
+var imageid = 9990001;
+for( var i =  0; i < fileidmac.length; i++ ) {
+  var imgfileStr = DriveApp.getFileById(fileidmac[i]).getBlob().getDataAsString();
+  base64 = "data:image/jpeg;base64," + imgfileStr;
+?>
+   //console.log(2);
+   document.getElementById("<?= imageid ?>").src = <?= base64 ?>;
+<?
+  imageid++;
+}
+?>
+}
+function movetoprevious(){
+var start = parseInt(<?= start ?>);
+var previous = start - 18;
+if(previous < 1){
+window.alert("No more Previous");
+}else{
+var start = parseInt(<?= start ?>);
+window.open("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=" + previous, "_top");
+}
+}
+
+function movetonext(){
+var start = parseInt(<?= start ?>);
+var next = start + 18;
+if(next > <?= counts ?>){
+window.alert("No more Next");
+}else{
+console.log("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=" + next);
+window.open("<?= url ?>?user=controller&pass=philosopher&phase=3&macid=<?= macid ?>&start=" + next, "_top");
+}
+}
+</script>
+
+
+<? } ?>
+
+</body>
