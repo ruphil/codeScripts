@@ -1,0 +1,41 @@
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+
+<script>
+    window.onload = function (){
+        document.write('<h1>Machine Learning In Mobile</h1>');
+
+        const a = tf.variable(tf.scalar(Math.random(),'float32'));
+        const b = tf.variable(tf.scalar(Math.random(),'float32'));
+        const c = tf.variable(tf.scalar(Math.random(),'float32'));
+                                                                                            
+        const learningRate = 0.05;
+        const optimizer = tf.train.sgd(learningRate);
+
+        function predict(xInput){
+            const x = tf.scalar(xInput, 'float32');
+            const ax2 = a.mul(x.square());
+            const bx = b.mul(x);
+            const y = ax2.add(bx).add(c);
+            return y;
+        }
+
+        function loss(prediction, yOutput) {
+            const error = tf.scalar(yOutput).sub(prediction).square();
+            return error.asScalar();
+        }
+
+        var xs = [0, 1, 2];
+        var ys = [1, 2, 3];
+
+        for (let i = 0; i < 100; i++){
+            let k = i % xs.length;
+            optimizer.minimize(function(){
+                const pred = predict(xs[k]);
+                const predLoss = loss(pred, ys[k]);
+                document.write("Loss: ", predLoss.dataSync().toString(), " a: ", a.dataSync().toString(), " b: ", b.dataSync().toString(), " c: ", c.dataSync().toString(), "<br/><br/>");
+                console.log("Loss:", predLoss.dataSync().toString(), "a:", a.dataSync().toString(), b.dataSync().toString(), c.dataSync().toString());
+                return predLoss;
+            });
+        }
+    }
+</script>

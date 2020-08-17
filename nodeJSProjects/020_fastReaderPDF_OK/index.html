@@ -1,0 +1,377 @@
+<html>
+    <head>
+        <title>Speed Reader</title>
+        <style>
+            #the-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                width: 100%;
+            }
+
+            .container {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            input[type=number] {
+                width: 40px;
+            }
+
+            .fixed {
+                position: fixed;
+                top: 10px;
+                width: 100%;
+                z-index: 100;
+            }
+
+            .movable {
+                position: absolute;
+                top: 85px;
+                width: 100%;
+            }
+
+            button {
+                color: green;
+            }
+
+            input[type="file"]{
+                color: green;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div style="text-align: center;" class="fixed">
+            <input id="uploadText" type="file" onchange="readFile();" />
+            <button id="prev">Previous</button>
+            <button id="next">Next</button>
+            &nbsp; &nbsp;
+            <span>Page: <input type="number" id="page_num"/> / <input type="number" id="page_count" disabled/></span>
+            
+            <button onclick="loadPage();">Load Page</button>
+            <span>Zoom: <input id="scale" type="number" value="1.0" step="0.5"/></span>
+            <button onclick="getText();">Text</button>
+            <button onclick="doOCR();">OCR</button>
+            &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;
+            <span>
+                Auto: <input class="autoCheck" type="checkbox" checked/>
+                <input name="auto" value="text" type="radio" checked/> Text
+                <input name="auto" value="ocr" type="radio" /> OCR
+            </span>
+            <hr/>
+            
+            <span>Page Statistics:
+                Width: <input type="text" id="page_width" size="3" disabled/>
+                Height: <input type="text" id="page_height" size="3" disabled/>
+            </span>
+            
+            &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;
+            <span>Speed Read: &nbsp; &nbsp;</span>
+            <span>Chunks: <input id="chunks" type="number" value="2"/></span>
+            <span>WPM: <input id="wpm" type="number" value="300"/></span>
+            <span>Font: <input id="font" type="number" value="65"/></span>
+            <span>Filter: <input id="filter" type="number" value="15"/></span>
+            <button onclick="speedRead();">Start</button>
+            <button onclick="pauseSpeedRead();">Pause</button>
+            <button onclick="stopSpeedRead();">Stop</button>
+            <br/><hr/>
+        </div>
+        <div style="text-align: center;" class="movable">
+            <span style="border: 2px solid green;min-height: 20px;" id="status" class="container"></span>
+            <div style="border: 2px solid blue;min-height: 480px;" id="display" class="container"></div><br/><hr/>
+            <canvas id="the-canvas"></canvas>
+        </div>
+
+        <div id="currentPageTextStore" style="display: none;"></div>
+        <div id="currentPageOCRStore" style="display: none;"></div>
+
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.1/tesseract.min.js" integrity="sha256-rFtXslbby/2sYbGEClC2CQvGADQE6Cq7oe8hJe3J4P8=" crossorigin="anonymous"></script> -->
+
+        <script src="pdf.min.js"></script>
+        <script src="pdf.worker.min.js"></script>
+        <script src="tesseract.min.js"></script>
+
+        <script>
+            var pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,            
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+            function readFile(){
+                clearOverheads();
+                file = document.getElementById("uploadText").files[0];
+
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function() {
+                    readPDF(reader.result);
+                };
+
+                reader.onerror = function() {
+                    console.log(reader.error);
+                };
+            }
+
+            function readPDF(result){
+                var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+                // console.log(pdfData);
+
+                pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                    pdfDoc = pdfDoc_;
+                    document.getElementById('page_count').value = pdfDoc.numPages;
+
+                    renderPage(pageNum);
+                });
+            }
+
+            function renderPage(num) {
+                pageRendering = true;
+
+                var scale = document.getElementById('scale').value;
+                // console.log(scale);
+                // Using promise to fetch the page
+                pdfDoc.getPage(num).then(function(page) {
+                    // console.log(num);
+                    page.getTextContent().then(function(textContent){
+                        var pageItems = textContent.items;
+                        var sentenceArry = [];
+                        for (let i = 0; i < pageItems.length; i++){
+                            sentenceArry.push(pageItems[i].str);
+                        }
+                        let sentence = sentenceArry.join(" ");
+                        document.getElementById('currentPageTextStore').innerText = sentence;
+                        document.getElementById('status').innerText += "Stored Extracted Text... ";
+                    });
+
+                    var viewport = page.getViewport({scale: scale});
+                    
+                    var pwidth = viewport.width;
+                    var pheight = viewport.height;
+                    
+                    canvas.width = pwidth;
+                    canvas.height = pheight;
+
+                    document.getElementById('page_width').value = pwidth;
+                    document.getElementById('page_height').value = pheight;
+                    
+
+                    // Render PDF page into canvas context
+                    var renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+                    var renderTask = page.render(renderContext);
+
+                    // Wait for rendering to finish
+                    renderTask.promise.then(function() {
+                        document.getElementById('status').innerText += "Page Rendering Completed...";
+                        pageRendering = false;
+
+                        var whetherAuto = document.querySelector('.autoCheck').checked;
+                        // console.log(whetherAuto);
+                        var autovalue = document.querySelector('input[name="auto"]:checked').value;
+
+                        if(whetherAuto){
+                            switch (autovalue){
+                                case "text": 
+                                    getText();
+                                    break;
+                                case "ocr":
+                                    doOCR();
+                                    break;
+                            }
+                        }
+
+                        if (pageNumPending !== null) {
+                            // New page rendering is pending
+                            renderPage(pageNumPending);
+                            pageNumPending = null;
+                        }
+                    });
+                });
+
+                // Update page counters
+                document.getElementById('page_num').value = num;
+            }
+
+            function getText(){
+                var sentence = document.getElementById('currentPageTextStore').innerText;
+                document.getElementById('display').innerText = sentence;
+                
+                var wordsCount = sentence.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ').split(" ").length;
+                document.getElementById('display').style.fontSize = 14;
+                document.getElementById('status').innerText = "Getting From Text Store... Words Count: " + wordsCount;
+            }
+
+            function doOCR(){
+                document.getElementById('display').style.fontSize = 14;
+                var textOCR = document.getElementById('currentPageOCRStore').innerText;
+                // console.log(textOCR);
+
+                if(textOCR == ""){
+                    var img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/jpeg');
+                    // console.log(img.src);
+
+                    document.getElementById('status').innerText = "Tesseract Recognizing...";
+                    Tesseract.recognize(
+                        img,
+                        'eng',
+                        // { logger: m => console.log(m) }
+                    ).then(({ data: { text } }) => {
+                        // console.log(text);
+                        document.getElementById('currentPageOCRStore').innerText = text;
+                        document.getElementById('display').innerText = text;
+                        document.getElementById('status').innerText = "Recognition Completed...";
+                        document.getElementById('status').innerText += "Stored Recognized Text... ";
+                    });
+                } else {
+                    document.getElementById('status').innerText = "Getting From OCR Store...";
+                    document.getElementById('display').innerText = document.getElementById('currentPageOCRStore').innerText;
+                }
+            }
+
+
+            /**
+            * If another page rendering in progress, waits until the rendering is
+            * finised. Otherwise, executes rendering immediately.
+            */
+            function queueRenderPage(num) {
+                if (pageRendering) {
+                    pageNumPending = num;
+                } else {
+                    renderPage(num);
+                }
+            }
+
+            /**
+            * Displays previous page.
+            */
+            function onPrevPage() {
+                clearOverheads();
+                if (pageNum <= 1) {
+                    return;
+                }
+                pageNum--;
+                queueRenderPage(pageNum);
+            }
+            document.getElementById('prev').addEventListener('click', onPrevPage);
+
+            /**
+            * Displays next page.
+            */
+            function onNextPage() {
+                clearOverheads();
+                if (pageNum >= pdfDoc.numPages) {
+                    return;
+                }
+                pageNum++;
+                queueRenderPage(pageNum);
+            }
+            document.getElementById('next').addEventListener('click', onNextPage);
+
+            function loadPage(){      
+                clearOverheads();
+                pageNum = parseInt(document.getElementById('page_num').value);
+                if (pageNum <= 1 || pageNum >= pdfDoc.numPages) {
+                    return;
+                }
+                queueRenderPage(pageNum);
+            }
+
+            function clearOverheads(){
+                document.getElementById('status').innerText = "";
+                document.getElementById('currentPageTextStore').innerText = "";
+                document.getElementById('currentPageOCRStore').innerText = "";
+                document.getElementById('display').style.fontSize = 14;
+                document.getElementById('display').innerText = "";
+                pageChunks = [];
+                currentIndex = 0;
+            }
+
+            var showInterval;
+            var pageChunks = [];
+            var currentIndex = 0;
+            function speedRead(){
+                var page = null;
+                // Start Paused Speed Read
+                if (pageChunks.length == 0){
+                    page = document.getElementById('display').innerText;
+                    page = page.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ');
+                    pageChunks = page.split(" ");
+                }
+
+                document.getElementById('display').innerText = "";
+                document.getElementById('display').style.fontSize = parseInt(document.getElementById('font').value);
+                var wpm = parseInt(document.getElementById('wpm').value);
+                var chunks = parseInt(document.getElementById('chunks').value);
+
+                showInterval = setInterval(function(){
+                    document.getElementById('status').innerText = "Page: " + pageNum + "; Words Left: " + (pageChunks.length - currentIndex) + " Of " + pageChunks.length;
+
+                    var displayStr = getDisplayString(chunks);
+                    // console.log(displayStr.length, displayStr);
+                    document.getElementById('display').innerHTML = "<pre>" + displayStr + "</pre>";
+
+                }, parseInt(chunks * 1000 * 60 / wpm));
+            }
+
+            function getDisplayString(wordsCount){
+                // console.log(currentIndex, pageChunks.length);
+
+                if(wordsCount == 1){
+                    currentIndex += 1;
+                    return pageChunks[currentIndex];
+                }
+
+                var currentWordsLen = 0;
+                for (var i = 1; i <= wordsCount; i++){
+                    try{
+                        currentWordsLen += pageChunks[currentIndex + i].length;
+                    } catch (e){
+                        clearInterval(showInterval);
+                    }
+                }
+                
+                var displayStr = "";
+                var filter = parseInt(document.getElementById('filter').value);
+                if(currentWordsLen < filter){
+                    var spaces = (filter - currentWordsLen) / (wordsCount - 1);
+                    if (spaces <= 0) spaces = 1;
+                    for (var j = 1; j <= wordsCount; j++){
+                        if(pageChunks[currentIndex + j] != undefined){
+                            if(j < wordsCount){
+                                displayStr += pageChunks[currentIndex + j] + " ".repeat(spaces);
+                            } else {
+                                displayStr += pageChunks[currentIndex + j];
+                            }
+                        }
+                    }
+                    currentIndex += wordsCount;
+
+                    return displayStr;
+                }
+                else {
+                    return getDisplayString(wordsCount - 1);
+                }
+            }
+
+            function pauseSpeedRead(){
+                clearInterval(showInterval);
+            }
+
+            function stopSpeedRead(){
+                clearInterval(showInterval);
+                pageChunks = [];
+                currentIndex = 0;
+                getText();
+            }
+        </script>
+    </body>
+</html>

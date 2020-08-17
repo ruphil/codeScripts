@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <title>BYJUs CNA Reader</title>
+    </head>
+    <body>
+        <div style="text-align: center;">
+            <button onclick="loadData();">Load Yesterday's BYJUs CNA Data</button>
+            <canvas id="the-canvas"></canvas>
+        </div>
+        
+        <div id="data"></div>
+        <script src="pdf.min.js"></script>
+        <script src="pdf.worker.min.js"></script>
+        <script src="jquery.min.js"></script>
+        <script>
+            function loadData(){
+                let url = "https://cdn1.byjus.com/wp-content/uploads/2020/07/06-Jul-2020-CNA.pdf";
+
+                let loadingTask = pdfjsLib.getDocument(url);
+                loadingTask.promise.then(function(pdf) {
+                    pdf.getPage(1).then(function(page) {
+                        
+                    });
+                });
+            }
+
+        
+        </script>
+    </body>
+</html>

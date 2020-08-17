@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Monopoly Money Manager</title>
+  <meta name="description" content="The HTML5 Herald">
+  <meta name="author" content="SitePoint">
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <table border="2" align="center">
+        <tr><td class="name">Rukmangadan</td><td class="name">Rajeshwari</td><td class="name">Kamala</td></tr>
+        <tr><td class="name"><div id="rukm">15,000,000</div></td><td class="name"><div id="raji">15,000,000</div></td><td class="name"><div id="kamala">15,000,000</div></td></tr>
+        <tr><td>
+            <button class="money" onclick="manageMoney(2000000,     'rukm')">+2M</button>
+            <button class="money" onclick="manageMoney(-2000000,    'rukm')">-2M</button>
+            <button class="money" onclick="manageMoney(1000000,     'rukm')">+1M</button>
+            <button class="money" onclick="manageMoney(-1000000,    'rukm')">-1M</button>
+            <button class="money" onclick="manageMoney(800000,      'rukm')">+800K</button>
+            <button class="money" onclick="manageMoney(-800000,     'rukm')">-800K</button>
+            <button class="money" onclick="manageMoney(-500000,     'rukm')">-500K</button>
+            <button class="money" onclick="manageMoney(300000,      'rukm')">+Rent</button>
+            <button class="money" onclick="manageMoney(-300000,     'rukm')">-Rent</button>
+            <button class="money" onclick="manageMoney(500000,      'rukm')">+House</button>
+            <button class="money" onclick="manageMoney(-500000,     'rukm')">-House</button>
+            <button class="money" onclick="manageMoney(3000000,     'rukm')">+Hotel</button>
+            <button class="money" onclick="manageMoney(-3000000,    'rukm')">-Hotel</button>
+        </td><td>
+            <button class="money" onclick="manageMoney(2000000,     'raji')">+2M</button>
+            <button class="money" onclick="manageMoney(-2000000,    'raji')">-2M</button>
+            <button class="money" onclick="manageMoney(1000000,     'raji')">+1M</button>
+            <button class="money" onclick="manageMoney(-1000000,    'raji')">-1M</button>
+            <button class="money" onclick="manageMoney(800000,      'raji')">+800K</button>
+            <button class="money" onclick="manageMoney(-800000,     'raji')">-800K</button>
+            <button class="money" onclick="manageMoney(-500000,     'raji')">-500K</button>
+            <button class="money" onclick="manageMoney(300000,      'raji')">+Rent</button>
+            <button class="money" onclick="manageMoney(-300000,     'raji')">-Rent</button>
+            <button class="money" onclick="manageMoney(500000,      'raji')">+House</button>
+            <button class="money" onclick="manageMoney(-500000,     'raji')">-House</button>
+            <button class="money" onclick="manageMoney(3000000,     'raji')">+Hotel</button>
+            <button class="money" onclick="manageMoney(-3000000,    'raji')">-Hotel</button>
+        </td><td>
+            <button class="money" onclick="manageMoney(2000000,     'kamala')">+2M</button>
+            <button class="money" onclick="manageMoney(-2000000,    'kamala')">-2M</button>
+            <button class="money" onclick="manageMoney(1000000,     'kamala')">+1M</button>
+            <button class="money" onclick="manageMoney(-1000000,    'kamala')">-1M</button>
+            <button class="money" onclick="manageMoney(800000,      'kamala')">+800K</button>
+            <button class="money" onclick="manageMoney(-800000,     'kamala')">-800K</button>
+            <button class="money" onclick="manageMoney(-500000,     'kamala')">-500K</button>
+            <button class="money" onclick="manageMoney(300000,      'kamala')">+Rent</button>
+            <button class="money" onclick="manageMoney(-300000,     'kamala')">-Rent</button>
+            <button class="money" onclick="manageMoney(500000,      'kamala')">+House</button>
+            <button class="money" onclick="manageMoney(-500000,     'kamala')">-House</button>
+            <button class="money" onclick="manageMoney(3000000,     'kamala')">+Hotel</button>
+            <button class="money" onclick="manageMoney(-3000000,    'kamala')">-Hotel</button>
+        </td></tr>
+    </table>
+    <script src="js/scripts.js"></script>
+</body>
+</html>

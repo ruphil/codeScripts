@@ -1,0 +1,103 @@
+<html>
+    <head>
+        <title>Speed Reader</title>
+        <style>
+            #the-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                /* width: 100%; */
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div style="text-align: center;" class="fixed">
+            <input id="uploadText" type="file" onchange="readFile();" /><br/>
+            <canvas id="the-canvas"></canvas>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+        <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+
+        <script>
+            var pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,            
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+            function readFile(){
+                file = document.getElementById("uploadText").files[0];
+
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function() {
+                    readPDF(reader.result);
+                };
+
+                reader.onerror = function() {
+                    console.log(reader.error);
+                };
+            }
+
+            function readPDF(result){
+                var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+                // console.log(pdfData);
+
+                pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                    pdfDoc = pdfDoc_;
+
+                    var pageNumber = 5;
+                    pdfDoc.getPage(pageNumber).then(function(page) {
+                        console.log('Page loaded');
+                        
+                        var scale = 1.0;
+                        var viewport = page.getViewport({scale: scale});
+                        var vwidth = viewport.width;
+                        var vheight = viewport.height;
+                        console.log(vwidth, vheight);
+
+                        // Origin is at Bottom Left
+
+                        var zoom = 7;
+                        var posX = vwidth, posY = vheight; // Top Right
+                        var posX = vwidth, posY = 0; // Bottom Right
+                        var posX = 0, posY = 0; // Bottom Left
+                        var posX = 0, posY = vheight; // Top Left
+                        var posX = vwidth / 2, posY = vheight / 2; // Middle Of Page
+
+                        console.log(viewport.transform[zoom]);
+                        let pX = posX * (zoom - 1);
+                        let pY = vheight + (zoom - 1) * posY;
+                        viewport.transform = [zoom, 0, 0, -zoom, -pX, pY];
+
+                        // Prepare canvas using PDF page dimensions
+                        var canvas = document.getElementById('the-canvas');
+                        var context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        // console.log(canvas.width, canvas.height);
+
+                        // Render PDF page into canvas context
+                        var renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                        };
+                        var renderTask = page.render(renderContext);
+                        renderTask.promise.then(function () {
+                        console.log('Page rendered');
+                        });
+                    });
+                }, function (reason) {
+                // PDF loading error
+                console.error(reason);
+                });
+            }
+
+                        
+        </script>
+    </body>
+</html>

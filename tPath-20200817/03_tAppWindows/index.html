@@ -1,0 +1,129 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+        <style>
+            div {
+                margin-left: 1em;
+                margin-right: 1em;
+            }
+        </style>
+    </head>
+    <body>
+        <ul class="tabs tabs-fixed-width tab-demo z-depth-1">
+            <li class="tab"><a class="active" href="#gettingstarted">Getting Started</a></li>
+            <li class="tab"><a href="#chartplayground">Chart Playground</a></li>
+            <li class="tab disabled"><a href="#stockscreener">Stock Screener</a></li>
+        </ul>
+
+        <div id="gettingstarted" class="col s12">
+            <p>
+                <b>BhavCopies:</b><span>&emsp;</span>
+                <button onclick="getBhavCopiesInfo();">Get / Set BhavCopies Status</button>
+                <button onclick="downloadMissingBhavcopies();">Download Missing BhavCopies Set</button>
+                <button onclick="checkZIPFilenames();">Check ZIP Filenames</button>
+                <button onclick="checkValidZipFiles();">Check Valid Zip Files</button>
+            </p>
+            <p>
+                <b>SQLITE: </b><span>&emsp;&emsp;&emsp;</span>
+                <button onclick="getSQLITEInfo();">SQLITE Bhavcopies Status</button>
+                <button onclick="updateDatabase();">Update Bhavcopies Into Database</button>
+            </p>
+            <p>
+                <b>GENERAL:</b><span>&emsp;&emsp;</span>
+                <button onclick="clearGettingStartedConsole();">Clear Console</button>
+            </p>
+
+            <div id="consoleGettingStarted" style="color: white; background-color: black; min-height: 25em; max-height: 25em; position: absolute; left: 1em; bottom: 1em; right: 1em; overflow-y: auto;"></div>
+
+        </div>
+
+        <div id="chartplayground" class="col s12">
+            <p><button onclick="getStockData()">Get Stock Data</button></p>
+        </div>
+
+        <div id="stockscreener" class="col s12"><p>Test 3</p></div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js" integrity="sha512-rmZcZsyhe0/MAjquhTgiUcb4d9knaFc7b5xAfju483gbEXTkeJRUMIPk6s3ySZMYUHEcjKbjLjyddGWMrNEvZg==" crossorigin="anonymous"></script>
+        <script>
+            $(document).ready(function(){
+                $('.tabs').tabs();
+            });
+        </script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            let socket = io();
+            
+            // Getting Started Scripts -----------------------------------------------------
+            // Getting Started Scripts -----------------------------------------------------
+            // Getting Started Scripts -----------------------------------------------------
+            let missingArray = [];
+            socket.on('bhavCopiesInfo', function(arry){
+                totalBhavCopies = arry[0];
+                missingArray = arry[1];
+
+                $('#overallStatus').text("Got Information From Server...");
+
+                addMessageToGettingStartedConsole("Total No. of Bhavcopies: " + totalBhavCopies);
+                addMessageToGettingStartedConsole("No. of Missing Bhavcopies: " + missingArray.length);
+            });
+
+            function getBhavCopiesInfo(){
+                socket.emit('getBhavCopiesInfo');
+
+                addMessageToGettingStartedConsole("Fetching tFiles from GSheet...");
+            }
+
+            function downloadMissingBhavcopies(){
+                socket.emit('downloadMissingBhavcopies', missingArray);
+            }
+
+            socket.on('putMsgToGettingStartedConsole', function(msg){
+                addMessageToGettingStartedConsole(msg);
+            });
+
+            function addMessageToGettingStartedConsole(msg){
+                let timeString = moment().format("YYYY-MM-DD[T]HH:mm:ss");
+                let consoleMsg = timeString + " > " + msg + "<br/>";
+
+                $('#consoleGettingStarted').html(consoleMsg + $('#consoleGettingStarted').html());
+            }
+
+            function clearGettingStartedConsole(){
+                $('#consoleGettingStarted').html("");
+            }
+
+            function getSQLITEInfo(){
+                socket.emit('getSQLITEInfo');
+            }
+
+            function updateDatabase(){
+                socket.emit('updateDatabase');
+            }
+
+            function checkValidZipFiles(){
+                socket.emit('checkValidZipFiles');
+            }
+
+            function checkZIPFilenames(){
+                socket.emit('checkZIPFilenames');
+            }
+        </script>
+
+        <script>
+            // Chart Playground ---------------------------------------------------------------
+            // Chart Playground ---------------------------------------------------------------
+            // Chart Playground ---------------------------------------------------------------
+            function getStockData(){
+                socket.emit('getAllStockSymbols');
+            }
+
+            socket.on('getAllStockSymbols', function(data){
+                console.log(data);
+            });
+        </script>
+
+
+    </body>
+</html>

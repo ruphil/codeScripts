@@ -1,0 +1,372 @@
+<html>
+    <head>
+        <title>Speed Reader</title>
+        <style>
+            #the-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                width: 100%;
+            }
+
+            .container {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            input[type=number] {
+                width: 60px;
+            }
+
+            .fixed {
+                position: fixed;
+                top: 10px;
+                width: 100%;
+                z-index: 100;
+            }
+
+            .movable {
+                position: absolute;
+                top: 85px;
+                width: 100%;
+            }
+
+            button {
+                color: green;
+            }
+
+            input[type="file"]{
+                color: green;
+            }
+        </style>
+        <!-- <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous"/> -->
+        <link href="font-awesome.min.css" rel="stylesheet"/>
+    </head>
+    <body>
+        
+        <div style="text-align: center;" class="fixed">
+            <input id="uploadText" type="file" onchange="readFile();" />
+            <button id="prev">Previous</button>
+            <button id="next">Next</button>
+            &nbsp; &nbsp;
+            <span>Page: <input type="number" id="page_num"/> / <input type="text" id="page_count" disabled size="3"/></span>
+            &nbsp; &nbsp;&nbsp;
+            <button onclick="loadPage();">Load Page</button>
+
+            <hr/>
+            
+            <span>
+                Width: <input type="text" id="page_width" size="3" disabled/>
+                Height: <input type="text" id="page_height" size="3" disabled/>
+            </span>
+            
+            &nbsp; &nbsp;&nbsp;
+            <span>Speed Read: &nbsp; &nbsp;</span>
+            <button onclick="adjustCurrentIndex('-');"><i class="fa fa-arrow-left"></i></button>
+            <input type="text" id="current_index" size="3" disabled/>
+            <span>of</span>
+            <input type="text" id="total_index" size="3" disabled/>
+            <button onclick="adjustCurrentIndex('+');"><i class="fa fa-arrow-right"></i></button>
+            &nbsp; &nbsp;&nbsp;
+            <span>WPM: <input id="wpm" type="number" value="300"/></span>
+            <span>Font: <input id="font" type="number" value="75"/></span>
+            <button onclick="speedRead();">Start</button>
+            <button onclick="pauseSpeedRead();">Pause</button>
+            <button onclick="resetSpeedRead();">Reset</button>
+            <br/><hr/>
+        </div>
+        <div style="text-align: center;" class="movable">
+            <span style="border: 2px solid green;min-height: 20px;" id="status" class="container"></span>
+            <div style="border: 2px solid blue;min-height: 480px;" id="display" class="container"></div><br/><hr/>
+            <canvas id="the-canvas"></canvas>
+        </div>
+
+        <div id="currentPageTextStore" style="display: none;"></div>
+
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.1/tesseract.min.js" integrity="sha256-rFtXslbby/2sYbGEClC2CQvGADQE6Cq7oe8hJe3J4P8=" crossorigin="anonymous"></script> -->
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0-2/js/fontawesome.min.js" integrity="sha256-bP9MBDJ4xkv81w/A2cgwRonMI+eelvZwm7e8rP5JIxA=" crossorigin="anonymous"></script> -->
+
+        <script src="pdf.min.js"></script>
+        <script src="pdf.worker.min.js"></script>
+        <script src="tesseract.min.js"></script>
+        <script src="fontawesome.min.js"></script>
+
+        <script>
+            var pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,            
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+            function readFile(){
+                clearOverheads();
+                file = document.getElementById("uploadText").files[0];
+
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function() {
+                    readPDF(reader.result);
+                };
+
+                reader.onerror = function() {
+                    console.log(reader.error);
+                };
+            }
+
+            function readPDF(result){
+                var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+                // console.log(pdfData);
+
+                pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                    pdfDoc = pdfDoc_;
+                    document.getElementById('page_count').value = pdfDoc.numPages;
+
+                    renderPage(pageNum);
+                });
+            }
+
+            function renderPage(num) {
+                pageRendering = true;
+
+                var scale = 1.0;
+                pdfDoc.getPage(num).then(function(page) {
+                    // console.log(num);
+                    page.getTextContent().then(function(textContent){
+                        var pageItems = textContent.items;
+                        var sentenceArry = [];
+                        for (let i = 0; i < pageItems.length; i++){
+                            sentenceArry.push(pageItems[i].str);
+                        }
+                        let sentence = sentenceArry.join(" ");
+                        document.getElementById('currentPageTextStore').innerText = sentence;
+                        document.getElementById('status').innerText += "Stored Extracted Text... ";
+                    });
+
+                    var viewport = page.getViewport({scale: scale});
+                    
+                    var pwidth = viewport.width;
+                    var pheight = viewport.height;
+                    
+                    canvas.width = pwidth;
+                    canvas.height = pheight;
+
+                    document.getElementById('page_width').value = pwidth;
+                    document.getElementById('page_height').value = pheight;
+
+                    // Render PDF page into canvas context
+                    var renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+                    var renderTask = page.render(renderContext);
+
+                    // Wait for rendering to finish
+                    renderTask.promise.then(function() {
+                        document.getElementById('status').innerText += "Page Rendering Completed...";
+                        pageRendering = false;
+
+                        getText();
+
+                        if (pageNumPending !== null) {
+                            // New page rendering is pending
+                            renderPage(pageNumPending);
+                            pageNumPending = null;
+                        }
+                    });
+                });
+
+                // Update page counters
+                document.getElementById('page_num').value = num;
+            }
+
+            var pageChunks = [];
+            var wordsCount = 0;
+            var currentIndex = 0;
+            function getText(){
+                clearTimeout(timeoutVar);
+                var sentence = document.getElementById('currentPageTextStore').innerText;
+                document.getElementById('display').innerText = sentence;
+                
+                pageChunks = sentence.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ').split(" ");
+                wordsCount = pageChunks.length;
+                document.getElementById('display').style.fontSize = 14;
+                document.getElementById('status').innerText = "Getting From Text Store... Words Count: " + wordsCount;
+                document.getElementById('current_index').value = currentIndex;
+                document.getElementById('total_index').value = wordsCount;
+            }
+
+            function queueRenderPage(num) {
+                if (pageRendering) {
+                    pageNumPending = num;
+                } else {
+                    renderPage(num);
+                }
+            }
+
+            /**
+            * Displays previous page.
+            */
+            function onPrevPage() {
+                clearOverheads();
+                if (pageNum <= 1) {
+                    return;
+                }
+                pageNum--;
+                queueRenderPage(pageNum);
+            }
+            document.getElementById('prev').addEventListener('click', onPrevPage);
+
+            /**
+            * Displays next page.
+            */
+            function onNextPage() {
+                clearOverheads();
+                if (pageNum >= pdfDoc.numPages) {
+                    return;
+                }
+                pageNum++;
+                queueRenderPage(pageNum);
+            }
+            document.getElementById('next').addEventListener('click', onNextPage);
+
+            function loadPage(){      
+                clearOverheads();
+                pageNum = parseInt(document.getElementById('page_num').value);
+                if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                    return;
+                }
+                queueRenderPage(pageNum);
+            }
+
+            function clearOverheads(){
+                document.getElementById('status').innerText = "";
+                document.getElementById('currentPageTextStore').innerText = "";
+                document.getElementById('display').style.fontSize = 14;
+                document.getElementById('display').innerText = "";
+                pageChunks = [];
+                currentIndex = 0;
+            }
+
+            var wpm = parseInt(document.getElementById('wpm').value);
+            var delay = parseInt(1000 * 60 / wpm * 2);
+            function speedRead(){
+                if (pageChunks.length == 0){
+                    document.getElementById('status').innerText = "Not Much To Speed Read ...";
+                    return;
+                }
+
+                document.getElementById('display').innerHTML = "";
+                displayIncrementalText();   
+            }
+
+            var timeoutVar = null;
+            function displayIncrementalText(){
+                document.getElementById('display').style.fontSize = parseInt(document.getElementById('font').value);
+                timeoutVar = setTimeout(function(){
+                    document.getElementById('status').innerText = "Page: " + pageNum + "; Words Left: " + (pageChunks.length - currentIndex) + " Of " + pageChunks.length;
+                    document.getElementById('current_index').value = currentIndex;
+
+                    var displayStr = "";
+                    var thisWord = pageChunks[currentIndex];
+                    var nextWord = pageChunks[currentIndex + 1];
+                    
+                    var tempStr = "";
+                    if (thisWord != undefined){
+                        if(nextWord != undefined){
+                            tempStr = thisWord + "<br/>" + nextWord;
+                        }
+                        else {
+                            tempStr = thisWord;
+                        }
+                    }
+                    var tempStrLen = tempStr.length;
+                    
+                    const regex = /[.\dA-Z),(]/g;   // PullStop, Digits, Capital Letters, Parantheses Regex
+                    
+                    if (thisWord != undefined){
+                        if(nextWord == undefined){  // Last Word Of Page
+                            displayStr = thisWord;
+                            currentIndex += 1;
+                        }
+                        else if (thisWord.search(regex) != -1){
+                            displayStr = thisWord;
+                            currentIndex += 1;
+                            delay = 2 * parseInt(1000 * 60 / wpm * 2);
+                        }
+                        else if (nextWord.search(regex) != -1){
+                            displayStr = thisWord + "<br/>" + nextWord;
+                            currentIndex += 2;
+                            delay = 2 * parseInt(1000 * 60 / wpm * 2);
+                        }
+                        else {
+                            displayStr = thisWord + "<br/>" + nextWord;
+                            currentIndex += 2;
+                            delay = parseInt(1000 * 60 / wpm * 2);
+                        }
+                        
+                        if(tempStrLen > 15){
+                           delay = 2 * parseInt(1000 * 60 / wpm * 2);
+                        }
+
+                        document.getElementById('display').innerHTML = displayStr;
+                    }
+                    // console.log(displayStr);
+
+                    if(currentIndex >= pageChunks.length){
+                        clearTimeout(timeoutVar);
+                        document.getElementById('display').innerHTML = pageChunks[pageChunks.length - 1];
+                    }
+
+                    displayIncrementalText();
+                }, delay);
+            }
+
+            function pauseSpeedRead(){
+                clearTimeout(timeoutVar);
+            }
+
+            function resetSpeedRead(){
+                clearTimeout(timeoutVar);
+                currentIndex = 0;
+                document.getElementById('current_index').value = currentIndex;
+
+                getText();
+            }
+
+            function adjustCurrentIndex(sign){
+                if(sign == '-'){
+                    var tempIndex = currentIndex - 50;
+                    if(tempIndex >= 0){
+                        currentIndex -= 50;
+                    }
+                } else if (sign == '+'){
+                    var tempIndex = currentIndex + 50;
+                    if(tempIndex < wordsCount){
+                        currentIndex += 50;
+                    }
+                }
+
+                clearTimeout(timeoutVar);
+                document.getElementById('current_index').value = currentIndex;
+                
+                var thisWord = pageChunks[currentIndex];
+                var nextWord = pageChunks[currentIndex + 1];
+                var displayStr = "";
+                if (thisWord != undefined){
+                    if(nextWord != undefined){
+                        displayStr = thisWord + "<br/>" + nextWord;
+                    }
+                    else {
+                        displayStr = thisWord;
+                    }
+                }
+                document.getElementById('display').style.fontSize = parseInt(document.getElementById('font').value);
+                document.getElementById('display').innerHTML = displayStr;
+            }
+        </script>
+    </body>
+</html>

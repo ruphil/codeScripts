@@ -1,0 +1,439 @@
+<html>
+<head>
+    <title>Prelims MCQs Manager</title>
+    <style>
+        button {
+                color: green;
+        }
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        span {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="border: 2px solid yellow; position: fixed;">
+        <button id="commitNPush" title="Commit N Push" onclick="commitNPush();">⟳</button>
+        <input id="uploadText" type="file" onchange="readFile();" style="width: 150px; color: green;" title="Load File"/>
+        <input type="number" id="page_num" min="1" title="Page" style="width: 60px;" onfocus="this.select()"/>
+        <span> / </span>
+        <input type="text" id="page_count" disabled size="3" title="Total Pages"/>
+        <button id="loadpage" onclick="loadPage();">Load</button>
+        <span id="status" style="color: blue"></span>
+	    <button id="prev">❮</button>
+        <button id="next">❯</button>
+        <input type="text" id="ques_count" size="3" title="Total Questions" disabled/>
+        <input type="number" id="current_ques" min="1" style="width: 60px;" title="Current Question" value="1"/>
+        <select id="ques_type">
+            <option value="q">Q</option>
+            <option value="a">A</option>
+            <option value="e">E</option>
+        </select>
+        <button onclick="splitParagraphs();">☆</button>
+    </div>
+
+    <div style="border: 2px solid yellow; position: fixed; top: 0em; right: 0em;">
+        X: <span id="posX">234</span>, Y: <span id="posY">34</span>
+    </div>
+
+    <div id="tools"></div>
+
+    <div style="border: 2px solid yellow;text-align: center;">
+        <canvas id="the-canvas"></canvas>
+    </div>
+
+    <script src="pdf.min.js"></script>
+    <script src="pdf.worker.min.js"></script>
+    <script src="jquery.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script> -->
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        let pdfDoc = null,
+        pageNum = 1,
+        pageRendering = false,
+        pageNumPending = null,            
+        canvas = document.getElementById('the-canvas'),
+        ctx = canvas.getContext('2d');
+
+        function readFile(){
+            let file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDF(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function readPDF(result){
+            let pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                document.getElementById('page_count').value = pdfDoc.numPages;
+                document.getElementById('page_num').max = pdfDoc.numPages;
+
+                renderPage(pageNum);
+            });
+
+            loadMCQsInfo();
+        }
+
+        let pageItems = [];
+        let pageWidth = 0;
+        let pageHeight = 0;
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let scale = 3;
+        function renderPage(num) {
+            pageRendering = true;
+
+            pdfDoc.getPage(num).then(function(page) {
+                pageWidth = page._pageInfo.view[2];
+                pageHeight = page._pageInfo.view[3];
+                // console.log(num);
+                
+                let viewport = page.getViewport({
+                    scale: scale
+                });
+                // console.log(viewport);
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                canvasWidth = viewport.width;
+                canvasHeight = viewport.height;
+                // console.log(viewport.width, viewport.height);
+
+                let renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                document.getElementById('the-canvas').style.width = window.innerWidth * 0.98;
+
+                let renderTask = page.render(renderContext);
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+
+                    drawBoxesNTools();
+
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            document.getElementById('page_num').value = num;
+        }
+
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        function loadPage(){
+            pageNum = parseInt(document.getElementById('page_num').value);
+            if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                return;
+            }
+            queueRenderPage(pageNum);
+        }
+    </script>
+    <script>
+        let socket = io();
+
+        HTMLCanvasElement.prototype.relMouseCoords = function (event) {
+            let totalOffsetX = 0;
+            let totalOffsetY = 0;
+            let canvasX = 0;
+            let canvasY = 0;
+            let currentElement = this;
+
+            do {
+                totalOffsetX += currentElement.offsetLeft;
+                totalOffsetY += currentElement.offsetTop;
+            }
+            while (currentElement = currentElement.offsetParent)
+
+            canvasX = event.pageX - totalOffsetX;
+            canvasY = event.pageY - totalOffsetY;
+
+            // Fix for variable canvas width
+            canvasX = Math.round( canvasX * (this.width / this.offsetWidth) );
+            canvasY = Math.round( canvasY * (this.height / this.offsetHeight) );
+
+            return {x:canvasX, y:canvasY}
+        }
+
+        let startCoord = [];
+        let endCoord = [];
+        let pageStart = [];
+        let pageEnd = [];
+        $('#the-canvas').mousedown(function(event){
+            let relativeMouseCoordinates = canvas.relMouseCoords(event);
+            let X = relativeMouseCoordinates.x;
+            let Y = relativeMouseCoordinates.y;
+            startCoord = [X, Y];
+        });
+
+        $('#the-canvas').mousemove(function(event){
+            let relativeMouseCoordinates = canvas.relMouseCoords(event);
+            let X = relativeMouseCoordinates.x;
+            let Y = relativeMouseCoordinates.y;
+            $('#posX').text(X);
+            $('#posY').text(Y);
+        });
+
+        $('#the-canvas').mouseup(function(event){
+            let relativeMouseCoordinates = canvas.relMouseCoords(event);
+            let X = relativeMouseCoordinates.x;
+            let Y = relativeMouseCoordinates.y;
+            endCoord = [X, Y];
+
+            if(endCoord[0] - startCoord[0] > 10 && endCoord[1] - startCoord[1] > 10){
+                addSectionToManager();
+            }
+        });
+
+        let radius_XMark = 20;
+        $('#the-canvas').click(function(event){
+            if(event.ctrlKey){
+                let fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+                let relativeMouseCoordinates = canvas.relMouseCoords(event);
+                let X = relativeMouseCoordinates.x;
+                let Y = relativeMouseCoordinates.y;
+
+                for(let i = 0; i < infoMCQs.length; i++){
+                    let quesInfo = infoMCQs[i];
+                    let quesInfoParts = quesInfo.split('-');
+                    let pageNo = parseInt(quesInfoParts[2]);
+
+                    let centerY = parseInt(quesInfoParts[4]);
+                    let centerX = parseInt(quesInfoParts[5]);
+
+                    let cond0 = pageNum == pageNo;
+                    let cond1 = Math.pow(centerX - X, 2) + Math.pow(centerY - Y, 2) < Math.pow(radius_XMark - 2, 2);
+                    if(cond0 && cond1){
+                        const index = infoMCQs.indexOf(quesInfo);
+                        if (index > -1) {
+                            infoMCQs.splice(index, 1);
+                        }
+                        socket.emit('updateInfo', [fileName, JSON.stringify(infoMCQs)]);
+                        renderPage(pageNum);
+                        return;
+                    }
+                }
+            } else if (event.shiftKey){
+                let fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+                let relativeMouseCoordinates = canvas.relMouseCoords(event);
+                let X = relativeMouseCoordinates.x;
+                let Y = relativeMouseCoordinates.y;
+
+                for(let i = 0; i < infoMCQs.length; i++){
+                    let quesInfo = infoMCQs[i];
+                    let quesInfoParts = quesInfo.split('-');
+                    
+                    let current_ques = parseInt(quesInfoParts[0]);
+                    let ques_type = quesInfoParts[1];
+                    let pageNo = parseInt(quesInfoParts[2]);
+                    let startCoordX = parseInt(quesInfoParts[3]);
+                    let startCoordY = parseInt(quesInfoParts[4]);
+                    let endCoordX = parseInt(quesInfoParts[5]);
+                    let endCoordY = parseInt(quesInfoParts[6]);
+
+                    let textX = startCoordX - 25;
+                    let textY = (startCoordY + endCoordY) / 2;
+
+                    let cond0 = pageNum == pageNo;
+                    let cond1 = Math.abs(textX - X) < 20;
+                    let cond2 = Math.abs(textY - Y) < 20;
+                    let quesID = current_ques + "-" + ques_type;
+                    if(cond0 && cond1 && cond2){
+                        const index = infoMCQs.indexOf(quesInfo);
+                        let quesIDNew = prompt("Please Enter Question ID", quesID);
+                        if (quesIDNew != null) {
+                            let quesInfoNew = quesIDNew + "-" + pageNo + "-" + startCoordX + "-" + startCoordY + "-" + endCoordX + "-" + endCoordY;
+                            infoMCQs[i] = quesInfoNew;
+                        
+                            socket.emit('updateInfo', [fileName, JSON.stringify(infoMCQs)]);
+                            renderPage(pageNum);
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+
+        let infoMCQs = [];
+        function addSectionToManager(){
+            let fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+            let quesInfo = $('#current_ques').val() + "-";
+            quesInfo += document.getElementById('ques_type').value + "-";
+            quesInfo += pageNum + "-";
+            quesInfo += startCoord[0] + "-" + startCoord[1] + "-";
+            quesInfo += endCoord[0] + "-" + endCoord[1];
+            
+            infoMCQs.push(quesInfo);
+
+            socket.emit('updateInfo', [fileName, JSON.stringify(infoMCQs)]);
+
+            drawBoxNTool(quesInfo);
+        }
+
+        function drawBoxNTool(quesInfo){            
+            let quesInfoParts = quesInfo.split('-');
+
+            let current_ques = parseInt(quesInfoParts[0]);
+            let ques_type = quesInfoParts[1];
+            let pageNo = parseInt(quesInfoParts[2]);
+            let startCoordX = parseInt(quesInfoParts[3]);
+            let startCoordY = parseInt(quesInfoParts[4]);
+            let endCoordX = parseInt(quesInfoParts[5]);
+            let endCoordY = parseInt(quesInfoParts[6]);
+
+            // Main Box of Content
+            ctx.rect(startCoordX, startCoordY, endCoordX - startCoordX, endCoordY - startCoordY);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#C71585';
+            ctx.stroke();
+
+            let centerX = endCoordX;
+            let centerY = startCoordY;
+
+            // Circle and X Mark
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius_XMark, 0, 2 * Math.PI);
+            ctx.fillStyle = '#DA70D6';
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#000000';
+            ctx.font = "20px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("X", centerX, centerY + 8);
+
+            // Content ID
+            ctx.fillText(current_ques + "-" + ques_type, startCoordX - 25, (startCoordY + endCoordY) / 2);
+        }
+
+        function loadMCQsInfo(){
+            let fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+            // console.log(fileName);
+            socket.emit('loadMCQsInfo', [fileName]);
+        }
+
+        socket.on("noInfo", function(data){
+            console.log("No Information Available for Current File, Created One");
+        });
+
+        socket.on("handleInfo", function(data){
+            // console.log("Loading Information");
+            // console.log(data);
+            infoMCQs = JSON.parse(data);
+        });
+
+        function drawBoxesNTools(){
+            document.getElementById('tools').innerHTML = "";
+            for(let i = 0; i < infoMCQs.length; i++){
+                let quesInfo = infoMCQs[i];
+                let quesInfoParts = quesInfo.split('-');
+                let pageNo = parseInt(quesInfoParts[2]);
+                console.log();
+                if(pageNo == pageNum){
+                    drawBoxNTool(quesInfo);
+                }
+            }
+            updateTotalQues();
+        }
+
+        function updateTotalQues(){
+            let maxQuesNo = 1;
+            for(let i = 0; i < infoMCQs.length; i++){
+                let quesNo = parseInt(infoMCQs[i].split('-')[0]);
+                if(maxQuesNo < quesNo){
+                    maxQuesNo = quesNo;
+                }
+            }
+
+            $('#ques_count').val(maxQuesNo);
+            $('#current_ques').val(maxQuesNo);
+        }
+
+        function commitNPush(){
+            socket.emit('commitNPush', '');
+        }
+
+        let imgPixelsData;
+        function splitParagraphs(){
+            let width = canvas.width, height = canvas.height;
+            let imgData = ctx.getImageData(0, 0, width, height);
+            let imgW = imgData.width;
+            let imgH = imgData.height;
+            imgPixelsData = imgData.data;
+
+            for(let i = 0; i < imgW; i++){
+                for (let j = 0; j < imgH; j++) {
+                    getColorIndicesForCoord(i, j, imgW);
+                }
+            }
+            console.log(2);
+        }
+
+        const getColorIndicesForCoord = (x, y, width) => {
+            const red = y * (width * 4) + x * 4;
+            let colorIndices = [red, red + 1, red + 2, red + 3];
+
+            let redIndex = colorIndices[0];
+            let greenIndex = colorIndices[1];
+            let blueIndex = colorIndices[2];
+            let alphaIndex = colorIndices[3];
+
+            let redForCoord = imgPixelsData[redIndex];
+            let greenForCoord = imgPixelsData[greenIndex];
+            let blueForCoord = imgPixelsData[blueIndex];
+            let alphaForCoord = imgPixelsData[alphaIndex];
+
+            return [redForCoord, greenForCoord, blueForCoord, alphaForCoord];
+        }
+    </script>
+</body>
+</html>

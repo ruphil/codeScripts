@@ -1,0 +1,353 @@
+<html>
+<head>
+    <title>Prelims MCQs Reader</title>
+    <style>
+        button {
+                color: green;
+        }
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        span {
+            color: green;
+        }
+
+        input[type=number] {
+                width: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="border: 2px solid yellow; position: fixed;">
+        <input id="uploadText" type="file" onchange="readFile();" style="width: 150px; color: green;" title="Load File"/>
+        <input type="number" id="page_num" min="1" title="Page" style="width: 60px;" onfocus="this.select()"/>
+        <span> / </span>
+        <input type="text" id="page_count" disabled size="3" title="Total Pages"/>
+        <button id="loadpage" onclick="loadPage();">Load</button>
+        <span id="status" style="color: blue"></span>
+	    <button id="prev" title="Previous">❮</button>
+        <button id="next" title="Next">❯</button>
+        <input type="number" id="rate" min="0.1" max="10" step="0.1" value="3" title="Rate"/>
+        <input type="number" id="pitch" min="0" max="2" step="0.1" value="0" title="Pitch"/>
+        <button id="stop" onclick="stopSpeaking();">◼</button>
+        <select id="voicesSelectId"></select>
+    </div>
+
+    <div style="border: 2px solid yellow;text-align: center;">
+        <canvas id="the-canvas"></canvas>
+    </div>
+
+    <div style="border: 2px solid yellow; position: fixed; top: 0em; right: 0em;">
+        X: <span id="posX">234</span>, Y: <span id="posY">34</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+
+    <script>
+        let pdfDoc = null,
+        pageNum = 1,
+        pageRendering = false,
+        pageNumPending = null,            
+        canvas = document.getElementById('the-canvas'),
+        ctx = canvas.getContext('2d');
+
+        function readFile(){
+            let file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDF(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function readPDF(result){
+            let pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                document.getElementById('page_count').value = pdfDoc.numPages;
+                document.getElementById('page_num').max = pdfDoc.numPages;
+
+                renderPage(pageNum);
+            });
+        }
+
+        let pageItems = [];
+        let pageWidth = 0;
+        let pageHeight = 0;
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let scale = 3;
+        function renderPage(num) {
+            pageRendering = true;
+
+            pdfDoc.getPage(num).then(function(page) {
+                pageWidth = page._pageInfo.view[2];
+                pageHeight = page._pageInfo.view[3];
+                // console.log(num);
+                
+                page.getTextContent().then(function(textContent){
+                    pageItems = textContent.items;
+                });
+
+                let viewport = page.getViewport({
+                    scale: scale
+                });
+                // console.log(viewport);
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                canvasWidth = viewport.width;
+                canvasHeight = viewport.height;
+                // console.log(viewport.width, viewport.height);
+
+                let renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                document.getElementById('the-canvas').style.width = window.innerWidth * 0.98;
+
+                let renderTask = page.render(renderContext);
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            document.getElementById('page_num').value = num;
+        }
+
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        function loadPage(){
+            pageNum = parseInt(document.getElementById('page_num').value);
+            if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                return;
+            }
+            queueRenderPage(pageNum);
+        }
+    </script>
+
+    <script>
+        window.speechSynthesis.getVoices();
+        window.onload = function(){
+            document.getElementById('status').innerText = "Please Wait, Voices Loading ...";
+            setTimeout(() => {
+                let voices = window.speechSynthesis.getVoices();
+                // console.log(voices);
+
+                document.getElementById('status').innerText = "Voices Loaded ...";
+                addLangOptions(voices);
+            }, 500);
+        }
+
+        function addLangOptions(voices){
+            let select = document.getElementById('voicesSelectId');
+            for (let i = 0; i < voices.length; i++) {
+                const voice = voices[i];
+                let option = document.createElement('option');
+                option.value = i;
+                option.innerHTML = (i+1) + ") " + voice.lang;
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                option.setAttribute('data-voiceURI', voice.voiceURI);
+                select.appendChild(option);
+            }
+            document.getElementById('status').innerText = "Voices Successfully Loaded ...";
+            selectPreviousVoice();
+        }
+
+        function selectPreviousVoice(){
+            let select = document.getElementById('voicesSelectId');
+
+            let selectedVoice = localStorage.getItem("selectedVoice");
+            // console.log(selectedVoice);
+            if(selectedVoice == null){
+                selectedVoice = 1;
+                localStorage.setItem("selectedVoice", 1);
+            }
+
+            select.value = parseInt(selectedVoice);
+        }
+
+        document.getElementById('voicesSelectId').onchange = function() {
+            let select = document.getElementById('voicesSelectId');
+            localStorage.setItem("selectedVoice", select.value);
+        }
+
+        function stopSpeaking(){
+            window.speechSynthesis.cancel();
+            document.getElementById('status').innerText = "Cancelling Speech Synthesis ...";
+        }
+    </script>
+
+    <script>
+        HTMLCanvasElement.prototype.relMouseCoords = function (event) {
+            let totalOffsetX = 0;
+            let totalOffsetY = 0;
+            let canvasX = 0;
+            let canvasY = 0;
+            let currentElement = this;
+
+            do {
+                totalOffsetX += currentElement.offsetLeft;
+                totalOffsetY += currentElement.offsetTop;
+            }
+            while (currentElement = currentElement.offsetParent)
+
+            canvasX = event.pageX - totalOffsetX;
+            canvasY = event.pageY - totalOffsetY;
+
+            // Fix for variable canvas width
+            canvasX = Math.round( canvasX * (this.width / this.offsetWidth) );
+            canvasY = Math.round( canvasY * (this.height / this.offsetHeight) );
+
+            return {x:canvasX, y:canvasY}
+        }
+
+        let startCoord = [];
+        let endCoord = [];
+        
+        let firstClick = false;
+
+        $('#the-canvas').click(function(event){
+            let relativeMouseCoordinates = canvas.relMouseCoords(event);
+            let X = relativeMouseCoordinates.x;
+            let Y = relativeMouseCoordinates.y;
+
+            if(firstClick == false){
+                startCoord = [X, Y];
+
+                firstClick = true;
+            } else {
+                endCoord = [X, Y];
+
+                firstClick = false;
+                drawBoxNStartReading();
+            }
+        });
+
+        $('#the-canvas').mousemove(function(event){
+            let relativeMouseCoordinates = canvas.relMouseCoords(event);
+            let X = relativeMouseCoordinates.x;
+            let Y = relativeMouseCoordinates.y;
+            $('#posX').text(X);
+            $('#posY').text(Y);
+        });
+
+        function drawBoxNStartReading(){
+            drawBox();
+
+            extractTextNStartReading();
+        }
+
+        function drawBox(){
+            if(startCoord[0] < canvasWidth / 2){
+                startCoord[0] = 50;
+                endCoord[0] = startCoord[0] + canvasWidth / 2.1;
+            } else {
+                startCoord[0] = canvasWidth / 2;
+                endCoord[0] = startCoord[0] + canvasWidth / 2.1;
+            }
+
+            ctx.rect(startCoord[0], startCoord[1], endCoord[0] - startCoord[0], endCoord[1] - startCoord[1]);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#C71585';
+            ctx.stroke();
+        }
+
+        let canvasText = "";
+        function extractTextNStartReading(){
+            // console.log(startCoord, endCoord);
+            let tempText = "";
+            for(let i = 0; i < pageItems.length; i++){
+                let str = pageItems[i].str;
+                let X = pageItems[i].transform[4];
+                let Y = pageHeight - pageItems[i].transform[5];
+
+                let scaledX = X * scale;
+                let scaledY = Y * scale;
+
+                let startCoordX = startCoord[0];
+                let startCoordY = startCoord[1];
+                let endCoordX = endCoord[0];
+                let endCoordY = endCoord[1];
+                if((startCoordX < scaledX && scaledX < endCoordX) && (startCoordY < scaledY && scaledY < endCoordY)){
+                    tempText += str.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ');
+                }
+            }
+
+            canvasText = tempText;
+            window.speechSynthesis.cancel();
+            setTimeout(() => {
+                startReading();    
+            }, 500);
+        }
+
+        function startReading(){
+            window.speechSynthesis.cancel();
+
+            let rate = parseFloat(document.getElementById('rate').value);
+            let pitch = parseFloat(document.getElementById('pitch').value);
+
+            let speaker = new SpeechSynthesisUtterance();
+            let voices = window.speechSynthesis.getVoices();
+            
+            let select = document.getElementById('voicesSelectId');
+            let selectIndex = parseInt(select.value);
+            speaker.voice = voices[selectIndex];
+
+            speaker.rate = rate;
+            speaker.pitch = pitch;
+
+            speaker.text = canvasText;
+            console.log(canvasText);
+            window.speechSynthesis.speak(speaker);
+        }
+    </script>
+    
+</body>
+</html>

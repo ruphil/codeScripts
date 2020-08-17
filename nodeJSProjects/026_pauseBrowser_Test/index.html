@@ -1,0 +1,33 @@
+<html>
+<head>
+    <title>Brower Pause</title>
+</head>
+<body>
+    <script>
+        var i = 0;
+        var limit = 10;
+        var delay = 500;
+        function speedread(){
+            
+            
+
+            setTimeout(function (){
+                console.log(i);
+                delay = 500;
+
+                if (i % 2 == 0){
+                    delay = 2000;
+                }
+
+                i++;
+
+                if(i < limit){
+                    speedread();
+                }
+            }, delay);
+        }
+        
+        speedread();
+    </script>
+</body>
+</html>

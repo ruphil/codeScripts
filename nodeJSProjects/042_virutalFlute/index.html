@@ -1,0 +1,17 @@
+<body>
+    <button id="tone">ToneJS</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.32/Tone.js" integrity="sha512-u+BKkD9QZxT9YM5jy1onOLRhahUhgHd5mfSpar+Wc8yeUy9WXzM0BbDg1ZHqkEU7OU6ASrUdxgVrKtJ446wcjg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.32/Tone.js.map"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script>
+        function startToneJS(){
+            let synth = new Tone.Synth().toDestination();
+            console.log(synth);
+            synth.triggerAttackRelease('C4', '1n')
+        }
+        
+        $('#tone').mousedown(function () {
+            startToneJS();
+        });
+    </script>
+</body>

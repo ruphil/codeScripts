@@ -1,0 +1,520 @@
+<html>
+<head>
+    <title>eNotes Manager</title>
+    <link href="" rel="stylesheet"/>
+    <style>
+        button {
+                color: green;
+        }
+
+        input[type="file"]{
+            color: green;
+        }
+
+        input[type=number] {
+                width: 60px;
+        }
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        span {
+            color: green;
+        }
+
+        .expand {
+            position: fixed;
+            top: 0.25em;
+            right: 2em;
+        }
+
+        .notesEditorRDisplay{
+            position: fixed;
+            width: 80%;
+            height: 80%;
+            max-height: 80%;
+            overflow: auto;
+            top: 30%;
+            left: 50%;
+            margin-top: -10%; /* Negative half of height. */
+            margin-left: -40%; /* Negative half of width. */
+            
+            font-size: 30px;
+            color: white;
+
+            border: solid 5px #FC5185;
+            background-color: green;
+            text-align: justify;
+            padding: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="border: 2px solid yellow;text-align: center;">
+        <button id="commitNPush" title="Commit N Push" onclick="commitNPush();">⟳</button>
+        <input id="uploadText" type="file" onchange="readFile();" style="width: 150px;" title="Load File"/>
+        <input type="number" id="scale" min="1" max="4" step="1" value="3" title="Scale"/>
+	    <input class="invertColor" type="checkbox" title="Invert"/>
+        <input type="number" id="page_num" min="1" title="Page" onfocus="this.select()"/>
+        <span> / </span>
+        <input type="text" id="page_count" disabled size="3"/>
+        <button id="loadpage" onclick="loadPage();">Load</button>
+        <span id="status" style="color: blue"></span>
+        <span></span> 
+        <input type="number" id="rate" min="0.1" max="10" step="0.1" value="4" title="Rate"/>
+        <span>Pitch:</span>
+        <input type="number" id="pitch" min="0" max="2" step="0.1" value="0" title="Pitch"/>
+	<button id="prev">❮</button>
+        <button id="next">❯</button>
+        <button id="play" onclick="readMainContent();">▶</button>
+        <button id="pause" onclick="pauseSpeaking();">⏸</button>
+        <button id="resume" onclick="resumeSpeaking();">⏯</button>
+        <button id="stop" onclick="stopSpeaking();">◼</button>
+    </div>
+    
+    <textarea id="unwantedText" class="expand" rows="1" cols="2"></textarea>
+
+    <div style="border: 2px solid yellow;text-align: center;">
+        <canvas id="the-canvas"></canvas>
+    </div>
+    
+    <div id="currentPageTextStore" style="display: none;"></div>
+    <div id="currentPageNotes" style="display: none;"></div>
+    
+    <div id="editorZone" class="notesEditorRDisplay" style="display: none;">
+        <button style="float:right;" id="ignoreButton">X</button>
+        <button style="float:right;" id="okButton">✓</button>
+        <div id="notesEditor" contenteditable="true"></div>
+    </div>
+
+    <div id="displayZone" class="notesEditorRDisplay" style="display: none;">
+        <button style="float:right;" id="closeButton">X</button>
+        <button style="position: fixed; left: 5%; top: 50%;" id="deleteButton" title="Remove Note">-</button>
+        <button style="float:right;" onclick="readNotes();">▶</button>
+        <div id="notesDisplay"></div>
+    </div>
+
+    <script src="pdf.min.js"></script>
+    <script src="pdf.worker.min.js"></script>
+    <script src="jquery.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script> -->
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        $(document).ready(function (){
+            $('#unwantedText').val(localStorage.getItem("unWantedText"));
+        });
+
+        $('textarea.expand').focus(function () {
+            $(this).animate({ height: "10em", width: "10em" }, 500);
+        });
+
+        $('textarea.expand').focusout(function () {
+            $(this).animate({ height: "1.5em", width: "2.5em"}, 500);
+            localStorage.setItem("unWantedText", $(this).val());
+        });
+    </script>
+
+    <script>
+        var pdfDoc = null,
+        pageNum = 1,
+        pageRendering = false,
+        pageNumPending = null,            
+        canvas = document.getElementById('the-canvas'),
+        ctx = canvas.getContext('2d');
+        var pwidth, pheight;
+
+        function readFile(){
+            var file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDF(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function readPDF(result){
+            var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                document.getElementById('page_count').value = pdfDoc.numPages;
+                document.getElementById('page_num').max = pdfDoc.numPages;
+
+                renderPage(pageNum);
+            });
+        }
+
+        function renderPage(num) {
+            pageRendering = true;
+
+	        var scale = parseFloat(document.getElementById('scale').value);
+            pdfDoc.getPage(num).then(function(page) {
+                // console.log(num);
+                page.getTextContent().then(function(textContent){
+                    var pageItems = textContent.items;
+                    var sentenceArry = [];
+                    for (let i = 0; i < pageItems.length; i++){
+                        sentenceArry.push(pageItems[i].str);
+                    }
+                    let sentence = sentenceArry.join(" ");
+                    document.getElementById('currentPageTextStore').innerText = sentence;
+                });
+
+                var viewport = page.getViewport({scale: scale});
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                // console.log(viewport.width, viewport.height);
+
+                var invertColor = document.querySelector('.invertColor').checked;
+                if(invertColor){
+                    ctx.filter = 'invert(1)';
+                }
+
+                var renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                document.getElementById('the-canvas').style.width = window.innerWidth * 0.98;
+
+                var renderTask = page.render(renderContext);
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+
+                    loadNotes(pageNum);
+
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            document.getElementById('page_num').value = num;
+        }
+
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        function loadPage(){
+            pageNum = parseInt(document.getElementById('page_num').value);
+            if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                return;
+            }
+            queueRenderPage(pageNum);
+        }
+
+        window.speechSynthesis.getVoices();
+        window.onload = function(){
+            document.getElementById('status').innerText = "Please Wait, Voices Loading ...";
+            setTimeout(() => {
+                var voices = window.speechSynthesis.getVoices();
+                // console.log(voices);
+                document.getElementById('status').innerText = "Voices Loaded ...";
+            }, 2000);
+        }
+
+        function readMainContent(){
+            var sentence = document.getElementById('currentPageTextStore').innerText;
+            startSpeaking(sentence);
+            pageScrollSection = "main";
+            pageScroll(pageScrollSection);
+        }
+
+        function startSpeaking(sentence){
+            window.speechSynthesis.cancel();
+            
+            if(sentence == ""){
+                document.getElementById('status').innerText = "Nothing To Read ...";
+                return;
+            }
+
+            let rate = parseFloat(document.getElementById('rate').value);
+            let pitch = parseFloat(document.getElementById('pitch').value);
+
+            let lang = "en-GB";
+            let voiceURI = "Microsoft Hazel Desktop - English (Great Britain)";
+
+            let speaker = new SpeechSynthesisUtterance();
+            let voices = window.speechSynthesis.getVoices();
+            speaker.voice = voices[1];
+
+            speaker.rate = rate;
+            speaker.pitch = pitch;
+
+            var unwantedText = localStorage.getItem("unWantedText");
+            var uwta;
+            if(unwantedText != null){
+                uwta = unwantedText.split('\n');
+            } else {
+                uwta = [];
+            }
+            // console.log(uwta);
+
+            var goodWords = sentence.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ');
+            var replacedWords = goodWords.replace(new RegExp(uwta.join('|'), 'gi'), '');;
+
+            speaker.text = replacedWords;
+            window.speechSynthesis.speak(speaker);
+
+            document.getElementById('status').innerText = "Now Reading ...";
+            
+            speaker.addEventListener('end', function () {
+                speechSynthesis.cancel();
+                document.getElementById('status').innerText = "Speech Synthesis Ended...";
+                playing = false;
+                clearTimeout(scrolldelay);
+            });
+        }
+
+        function pauseSpeaking(){
+            window.speechSynthesis.pause();
+            document.getElementById('status').innerText = "Paused ...";
+            clearTimeout(scrolldelay);
+        }
+
+        var pageScrollSection = "main";
+        function resumeSpeaking(){
+            window.speechSynthesis.resume();
+            document.getElementById('status').innerText = "Resumed ...";
+            pageScroll();
+        }
+
+        function stopSpeaking(){
+            window.speechSynthesis.cancel();
+            document.getElementById('status').innerText = "Cancelling Speech Synthesis ...";
+            clearTimeout(scrolldelay);
+        }
+
+        var scrollInterval = 100;
+        var scrolldelay;
+        var anyButtonPressed = false;
+        var playing = false;
+        var pausedState = false;
+        var scrolling = false;
+
+        document.onkeydown = function(){
+            anyButtonPressed = true;
+        }
+
+        document.onkeyup = function(){
+            anyButtonPressed = false;
+        }
+        
+        function pageScroll() {
+            if(anyButtonPressed == false && pageScrollSection == "main"){
+                window.scrollBy(0, 1);
+            }
+            
+            if(anyButtonPressed == false && pageScrollSection == "notes"){
+                document.getElementById('displayZone').scrollBy(0, 1);
+            }
+
+            scrolldelay = setTimeout(pageScroll, scrollInterval);
+        }
+    </script>
+    <script>
+        var socket = io();
+
+        HTMLCanvasElement.prototype.relMouseCoords = function (event) {
+            var totalOffsetX = 0;
+            var totalOffsetY = 0;
+            var canvasX = 0;
+            var canvasY = 0;
+            var currentElement = this;
+
+            do {
+                totalOffsetX += currentElement.offsetLeft;
+                totalOffsetY += currentElement.offsetTop;
+            }
+            while (currentElement = currentElement.offsetParent)
+
+            canvasX = event.pageX - totalOffsetX;
+            canvasY = event.pageY - totalOffsetY;
+
+            // Fix for variable canvas width
+            canvasX = Math.round( canvasX * (this.width / this.offsetWidth) );
+            canvasY = Math.round( canvasY * (this.height / this.offsetHeight) );
+
+            return {x:canvasX, y:canvasY}
+        }
+
+        function readNotes(){
+            var sentence = document.getElementById('notesDisplay').innerText;
+            startSpeaking(sentence);
+            pageScrollSection = "notes";
+            pageScroll(pageScrollSection);
+        }
+
+        let radius = 20;
+        document.getElementById('the-canvas').onclick = function(e){
+            var fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+            if(e.shiftKey){
+                // console.log(fileName);
+                // console.log(e.pageX, e.pageY);
+                let canvas = document.getElementById('the-canvas');
+                // console.log(canvas.clientWidth, canvas.clientHeight);
+
+                let relativeMouseCoordinates = canvas.relMouseCoords(event);
+                let X = relativeMouseCoordinates.x;
+                let Y = relativeMouseCoordinates.y;
+                // console.log(X, Y);
+
+                var editorZone = document.getElementById('editorZone');
+                editorZone.style.display = "initial";
+
+                document.getElementById('notesEditor').focus();
+
+                var okButton = document.getElementById('okButton');
+                var ignoreButton = document.getElementById('ignoreButton');
+
+                okButton.onclick = function(){
+                    var notesJSON = JSON.parse(document.getElementById('currentPageNotes').innerText);
+                    var ID = pageNum + "-" + X + "-" + Y;
+
+                    // var content = ID + ":" + Math.random().toString(36).substring(7);
+                    let content = document.getElementById('notesEditor').innerHTML;
+
+                    notesJSON[ID] = content;
+                    socket.emit('updateNotes', [fileName, pageNum, JSON.stringify(notesJSON)]);
+
+                    editorZone.style.display = "none";
+                    document.getElementById('notesEditor').innerHTML = "";
+                }
+
+                ignoreButton.onclick = function(){
+                    editorZone.style.display = "none";
+                    document.getElementById('notesEditor').innerHTML = "";
+                }
+            } else if(e.ctrlKey){
+                let relativeMouseCoordinates = canvas.relMouseCoords(event);
+                let X = relativeMouseCoordinates.x;
+                let Y = relativeMouseCoordinates.y;
+                // console.log(X, Y);
+                
+                var notesJSON = JSON.parse(document.getElementById('currentPageNotes').innerText);
+                Object.keys(notesJSON).forEach(function(key) {
+                var keyParts = key.split('-');
+                var jsonPageNum = parseInt(keyParts[0]);
+                    if(pageNum == jsonPageNum){
+                        let notesX = parseInt(keyParts[1]);
+                        let notesY = parseInt(keyParts[2]);
+
+                        if(Math.pow(notesX - X,2) + Math.pow(notesY - Y,2) < Math.pow(50,2)){
+                            let htmlValue = notesJSON[key];
+                            // console.log(key, htmlValue);
+
+                            var displayZone = document.getElementById('displayZone');
+                            displayZone.style.display = "initial";
+
+                            var notesDisplay = document.getElementById('notesDisplay');
+                            notesDisplay.innerHTML = htmlValue;
+
+                            var closeButton = document.getElementById('closeButton');
+                            closeButton.onclick = function(){
+                                displayZone.style.display = "none";
+                                document.getElementById('notesDisplay').innerHTML = "";
+                            }
+
+                            var deleteButton = document.getElementById('deleteButton');
+                            deleteButton.onclick = function(){
+                                delete notesJSON[key];
+                                displayZone.style.display = "none";
+                                document.getElementById('notesDisplay').innerHTML = "";
+
+                                socket.emit('updateNotes', [fileName, pageNum, JSON.stringify(notesJSON)]);
+
+                                queueRenderPage(pageNum);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        socket.on("handleNotes", function(data){
+            console.log("Notes Loaded");
+            // console.log(data);
+            document.getElementById('currentPageNotes').innerText = data;
+
+            var notesJSON = JSON.parse(data);
+            let canvas = document.getElementById('the-canvas');
+            let ctx = canvas.getContext('2d');
+            Object.keys(notesJSON).forEach(function(key) {
+                var keyParts = key.split('-');
+                var jsonPageNum = parseInt(keyParts[0]);
+
+                if(pageNum == jsonPageNum){
+                    let notesX = parseInt(keyParts[1]);
+                    let notesY = parseInt(keyParts[2]);
+                    
+                    let value = notesJSON[key];
+
+                    ctx.beginPath();
+                    ctx.arc(notesX, notesY, radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#DA70D6';
+                    ctx.fill();
+                    ctx.lineWidth = 5;
+                    ctx.strokeStyle = '#C71585';
+                    ctx.stroke();
+                }
+            });
+        });
+        
+        socket.on("noNotes", function(data){
+            console.log("No Notes Available For Current Page, Created One");
+            document.getElementById('currentPageNotes').innerText = JSON.stringify({});
+        });
+
+        function loadNotes(pageNo){
+            var fileName = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.');
+            console.log(fileName);
+            socket.emit('loadNotes', [fileName, pageNo]);
+        }
+
+        function commitNPush(){
+            socket.emit('commitNPush', '');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<html>
+    <head>
+        <title>BYJUs CNA Reader</title>
+    </head>
+    <body>
+        <div style="text-align: center;">
+            Yesterdays URL: <input type="text" size="100" id="url"/><br/><br/>
+            <button onclick="loadData();">Load Yesterday's BYJUs CNA Data</button>
+            <button onclick="startReading();">Start Reading</button><br/><br/>
+            <div id="data" style="border: 2px solid yellow;"></div>
+        </div>
+
+        <script src="jquery.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js" integrity="sha512-rmZcZsyhe0/MAjquhTgiUcb4d9knaFc7b5xAfju483gbEXTkeJRUMIPk6s3ySZMYUHEcjKbjLjyddGWMrNEvZg==" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/en-in.min.js" integrity="sha512-agujwxOG1m/5pDyaVY7DG6li9XYPoe6479lKTgDLKJ1ngEGrWmGqCLxIWJqr33U6Fl8x3vSlRV7pme2hF8uSqg==" crossorigin="anonymous"></script>
+        <script>
+            window.onload = function(){
+                let momentInstance = moment();
+                let month = momentInstance.format('MMM').toLowerCase();
+                let date = momentInstance.subtract(1, 'days').format('DD');
+                let year = momentInstance.format('YYYY');
+                let urlPrefix = `https://byjus.com/free-ias-prep/upsc-exam-comprehensive-news-analysis-${month}${date}-${year}/`;
+                $('#url').val(urlPrefix);
+            }
+
+            let socket = io();
+            function loadData(){
+                socket.emit("loadPage", $('#url').val());
+            }
+
+            socket.on("handlePage", function(data){
+                
+                document.getElementById('data').innerHTML = data;
+            });
+            
+        </script>
+    </body>
+</html>

@@ -1,0 +1,384 @@
+<html>
+<head>
+    <title>TTS_MobilePDF</title>
+    <style>
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        span {
+            color: green;
+        }
+
+        #currentPageTexts {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+
+            touch-action: manipulation;
+            font-size: 2em;
+        }
+
+        #uploadText {
+            position: fixed;
+            font-size: 4em;
+            top: 1em;
+            right: 1em;
+            width: 5.2em;
+        }
+
+        #stop {
+            position: fixed;
+            font-size: 5em;
+            bottom: 0.5em;
+            left: 0.5em;
+        }
+
+        #page_num {
+            position: fixed;
+            font-size: 5em;
+            bottom: 0.5em;
+            left: 3em;
+            width: 2em;
+        }
+
+        #page_count {
+            position: fixed;
+            font-size: 5em;
+            bottom: 0.5em;
+            left: 6em;
+            width: 2em;
+        }
+
+        #loadpage {
+            position: fixed;
+            font-size: 3em;
+            bottom: 1em;
+            right: 1em;
+            width: 3em;
+        }
+
+        #prev {
+            position: fixed;
+            font-size: 5em;
+            bottom: 3em;
+            right: 2.5em;
+        }
+
+        #next {
+            position: fixed;
+            font-size: 5em;
+            bottom: 3em;
+            right: 0.5em;
+        }
+    </style>
+</head>
+
+<body>
+    <input id="uploadText" type="file" onchange="readFile();" />
+    
+    <button id="prev"><i class="fa fa-arrow-left" aria-hidden="true"></i></button>
+    <button id="next"><i class="fa fa-arrow-right" aria-hidden="true"></i></button>
+    
+    <input type="number" id="page_num" min="1" title="Page" onfocus="this.select()"/>
+    <input type="text" id="page_count" disabled size="3"/>
+    
+    <button id="loadpage" onclick="loadPage();">Load Page</button>
+    <button id="stop" onclick="stopSpeaking();"><i class="fa fa-stop" aria-hidden="true"></i></button>
+
+    <div style="border: 2px solid yellow;text-align: center;">
+        <span id="status" style="color: blue"></span>
+        <input type="number" id="rate" min="0.1" max="10" step="0.1" value="2.5" title="Rate"/>
+        <input type="number" id="pitch" min="0" max="2" step="0.1" value="0" title="Pitch"/>
+        <select id="voicesSelectId"></select>
+    </div>
+    
+    <div id="currentPageTexts" style="text-align: justify; padding: 1em"></div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js" integrity="sha512-rmZcZsyhe0/MAjquhTgiUcb4d9knaFc7b5xAfju483gbEXTkeJRUMIPk6s3ySZMYUHEcjKbjLjyddGWMrNEvZg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/en-in.min.js" integrity="sha512-agujwxOG1m/5pDyaVY7DG6li9XYPoe6479lKTgDLKJ1ngEGrWmGqCLxIWJqr33U6Fl8x3vSlRV7pme2hF8uSqg==" crossorigin="anonymous"></script>
+    <script src="https://use.fontawesome.com/ec6038d8c1.js"></script>
+
+    <script>
+        function readFile(){
+            file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDF(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        let pdfDoc = null;
+        let pageNum = 1;
+        function readPDF(result){
+            let pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                document.getElementById('page_count').value = pdfDoc.numPages;
+                document.getElementById('page_num').max = pdfDoc.numPages;
+
+                extractText(pageNum);
+            });
+        }
+
+        function extractText(num) {
+            pdfDoc.getPage(num).then(function(page) {
+                let pageWidth = page._pageInfo.view[2];
+                let pageHeight = page._pageInfo.view[3];
+                // console.log(page._pageInfo.view);
+                // console.log(num);
+                page.getTextContent().then(function(textContent){
+                    manageTextContent(textContent, pageWidth, pageHeight);
+                });
+            });
+
+            document.getElementById('page_num').value = num;
+        }
+
+        let partsCount = 0;
+        let bypassWord = "";
+        let partNo = 0;
+        let dblClicked = false;
+        function manageTextContent(textContent, pageWidth, pageHeight){
+          let items = textContent.items;
+          
+          let pageText = "";
+          for(let i = 0; i < items.length; i++){
+            pageText += items[i].str + " ";
+          }
+          
+          pageText = pageText.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ');
+          
+          let sentenceParts = pageText.split('.');
+          
+          partsCount = sentenceParts.length;
+          document.getElementById('currentPageTexts').innerHTML = "";
+          
+          for(let i = 0; i < partsCount; i++){
+            let spanText = sentenceParts[i];
+            let spanWords = spanText.split(' ');
+            
+            let sSpan = document.createElement('span');
+            sSpan.id = 's-' + i;
+            
+            for(let j = 0; j < spanWords.length; j++){
+              let wSpan = document.createElement('span');
+//              wSpan.id = 's-' + i + '-w-' + j;
+              
+              if(j == spanWords.length - 1){
+                wSpan.innerText = spanWords[j] + ". ";
+              } else {
+                wSpan.innerText = spanWords[j] + " ";
+              }
+              
+              sSpan.appendChild(wSpan);
+              
+              $(wSpan).dblclick(function(){
+                dblClicked = true;
+                window.speechSynthesis.cancel();
+
+                setTimeout(() => {
+                  partNo = i;
+                  bypassWord = $(this).text();
+                
+                  buttonInterruption = false;
+                  dblClicked = false;
+                  startReading();
+                }, 500);
+                
+                let sentence = $(this).parent().text();
+                let sentenceLen = sentence.length;
+                
+                let occurence = sentence.indexOf(bypassWord);
+                
+                console.log(bypassWord);
+                console.log(sentence);
+                console.log(sentence.slice(occurence, sentenceLen));
+              });
+            }
+            
+            $(sSpan).click(function(){
+              $(this).css({ backgroundColor: getRandomColor(), color: getRandomColor() });
+            });
+            
+            document.getElementById('currentPageTexts').appendChild(sSpan);
+          }
+        }
+        
+        function getRandomColor() {
+          var letters = '0123456789ABCDEF';
+          var color = '#';
+          for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            extractText(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            extractText(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        function loadPage(){
+            pageNum = parseInt(document.getElementById('page_num').value);
+            if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                return;
+            }
+            extractText(pageNum);
+        }
+
+        window.speechSynthesis.getVoices();
+        window.onload = function(){
+            document.getElementById('status').innerText = "Please Wait, Voices Loading ...";
+            setTimeout(() => {
+                let voices = window.speechSynthesis.getVoices();
+                // console.log(voices);
+
+                document.getElementById('status').innerText = "Voices Loaded ...";
+                addLangOptions(voices);
+            }, 500);
+        }
+
+        function addLangOptions(voices){
+            let select = document.getElementById('voicesSelectId');
+            for (let i = 0; i < voices.length; i++) {
+                const voice = voices[i];
+                let option = document.createElement('option');
+                option.value = i;
+                option.innerHTML = (i+1) + ") " + voice.lang;
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                option.setAttribute('data-voiceURI', voice.voiceURI);
+                select.appendChild(option);
+            }
+            document.getElementById('status').innerText = "Voices Successfully Loaded ...";
+            selectPreviousVoice();
+        }
+
+        function selectPreviousVoice(){
+            let select = document.getElementById('voicesSelectId');
+
+            let selectedVoice = localStorage.getItem("selectedVoice");
+            // console.log(selectedVoice);
+            if(selectedVoice == null){
+                selectedVoice = 1;
+                localStorage.setItem("selectedVoice", 1);
+            }
+
+            select.value = parseInt(selectedVoice);
+        }
+
+        document.getElementById('voicesSelectId').onchange = function() {
+            let select = document.getElementById('voicesSelectId');
+            localStorage.setItem("selectedVoice", select.value);
+        }
+
+        let buttonInterruption = false;
+        document.getElementById('stop').addEventListener('click', function(){
+            buttonInterruption = true;
+        });
+        
+        document.getElementById('prev').addEventListener('click', function(){
+            buttonInterruption = true;
+        });
+        
+        document.getElementById('next').addEventListener('click', function(){
+            buttonInterruption = true;
+        });
+
+        function startReading(){
+            window.speechSynthesis.cancel();
+            
+            if(partNo >= partsCount){
+                console.log("Current Page is Over");
+                partNo = 0;
+                onNextPage();
+                setTimeout(() => {
+                    startReading();
+                }, 1000);
+                return;
+            }
+
+            let idSpan = "s-" + partNo;
+            let spanElem = document.getElementById(idSpan);
+            $(spanElem).css({ backgroundColor: getRandomColor(), color: getRandomColor() });
+
+            let idSpanTag = "#" + idSpan;
+            $('html, body').animate({
+                scrollTop: $(idSpanTag).offset().top - $(window).height() / 2 + $(idSpanTag).height() / 2
+            }, 500);
+
+            let sentence = spanElem.innerText;
+            if(bypassWord != ""){
+              let sentenceLen = sentence.length;
+              let occurence = sentence.indexOf(bypassWord);
+//              console.log(bypassWord);
+//              console.log(sentence);
+
+              sentence = sentence.slice(occurence, sentenceLen);
+            }
+
+            let rate = parseFloat(document.getElementById('rate').value);
+            let pitch = parseFloat(document.getElementById('pitch').value);
+
+            let speaker = new SpeechSynthesisUtterance();
+            let voices = window.speechSynthesis.getVoices();
+
+            let select = document.getElementById('voicesSelectId');
+            let selectIndex = parseInt(select.value);
+            speaker.voice = voices[selectIndex];
+
+            speaker.rate = rate;
+            speaker.pitch = pitch;
+
+            speaker.text = sentence;
+            window.speechSynthesis.speak(speaker);
+
+            document.getElementById('status').innerText = "Now Reading ...";
+            
+            speaker.addEventListener('end', function () {
+                bypassWord = "";
+                if(buttonInterruption == false && dblClicked == false){
+                    partNo++;
+                    startReading();
+                }
+            });
+        }
+
+        function stopSpeaking(){
+            window.speechSynthesis.cancel();
+            document.getElementById('status').innerText = "Cancelling Speech Synthesis ...";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      #play{
+        position: fixed;
+        font-size: 2em;
+        top: 0.5em;
+        left: 0.5em;
+      }
+      
+      #stop{
+        position: fixed;
+        font-size: 2em;
+        top: 0.5em;
+        right: 0.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="text-align: center;">
+      <input type="text" size="100" id="url"/><br/><br/>
+      <button onclick="loadData();">Yesterday's BYJUs CNA</button>
+      <span id="status" style="color: blue"></span>
+      <input type="number" id="rate" min="0.1" max="10" step="0.1" value="2.5" title="Rate"/>
+      <input type="number" id="pitch" min="0" max="2" step="0.1" value="0" title="Pitch"/>
+      <select id="voicesSelectId"></select>
+      
+      <span id="status" style="color: blue"></span>
+      <div id="data" style="border: 2px solid yellow;"></div>
+    </div>
+    
+    <div id="tempjQueryStorage" style="border: 2px solid yellow; display: none;"></div>
+    <button onclick="startReading();" id="play"><i class="fa fa-play" aria-hidden="true"></i></button>
+    <button onclick="stopReading();" id="stop"><i class="fa fa-stop" aria-hidden="true"></i></button>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js" integrity="sha512-rmZcZsyhe0/MAjquhTgiUcb4d9knaFc7b5xAfju483gbEXTkeJRUMIPk6s3ySZMYUHEcjKbjLjyddGWMrNEvZg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/en-in.min.js" integrity="sha512-agujwxOG1m/5pDyaVY7DG6li9XYPoe6479lKTgDLKJ1ngEGrWmGqCLxIWJqr33U6Fl8x3vSlRV7pme2hF8uSqg==" crossorigin="anonymous"></script>
+    <script src="https://use.fontawesome.com/ec6038d8c1.js"></script>
+    <script>
+    window.speechSynthesis.getVoices();
+    window.onload = function(){
+      let momentInstance = moment();
+      let date = momentInstance.subtract(1, 'days').format('DD');
+      let month = momentInstance.format('MMM').toLowerCase();
+      let year = momentInstance.format('YYYY');
+      
+      let urlPrefix = 'https://byjus.com/free-ias-prep/upsc-exam-comprehensive-news-analysis-' + month + date + '-' + year;
+      
+      $('#url').val(urlPrefix);
+      
+      document.getElementById('status').innerText = "Please Wait, Voices Loading ...";
+      setTimeout(() => {
+        let voices = window.speechSynthesis.getVoices();
+        // console.log(voices);
+        
+        document.getElementById('status').innerText = "Voices Loaded ...";
+        addLangOptions(voices);
+      }, 2000);
+    }
+    
+    function loadData(){
+      google.script.run.withSuccessHandler(handlePage).fetchURL($('#url').val());
+    }
+    
+    let selectedDescendants = [];
+    let currentDescendantNo = 0;
+    function handlePage (htmlData){
+      document.getElementById('tempjQueryStorage').innerHTML = htmlData;
+      
+      document.getElementById('data').innerHTML = $('article').html();
+      let text = $("#data").text();
+      let textParts = text.split('\n');
+      
+      let nonEmptyTextParts = [];
+      for(let i = 0; i < textParts.length; i++){
+        if(textParts[i].length != "" && !(/^\s+$/.test(textParts[i]))){
+          nonEmptyTextParts.push(textParts[i]);
+        }
+      }
+      
+      let descendants = $("#data").find('*');
+      for(let i = 0; i < nonEmptyTextParts.length; i++){
+        let currentText = nonEmptyTextParts[i];
+        
+        let matchingTags = [];
+        for(let j = 0; j < descendants.length; j++){
+          let currentDescendant = descendants[j];
+          let currentDescendantText = $(currentDescendant).text();
+          if(currentDescendantText.includes(currentText)){
+            matchingTags.push([currentDescendant, currentDescendantText.length]);
+          }
+        }
+        
+        matchingTags.sort(function (a, b){
+          return a[1] - b[1];
+        });
+        
+        for(let k = 0; k < matchingTags.length; k++){
+          let whetherOKToPush = true;
+          for(let l = 0; l < selectedDescendants.length; l++){
+            if(!(matchingTags[k][1] > 0) || Math.abs($(selectedDescendants[l][0]).offset().top - $(matchingTags[k][0]).offset().top) < 10){
+              whetherOKToPush = false;
+            }
+          }
+          
+          if(whetherOKToPush){
+            selectedDescendants.push([matchingTags[k][0], currentText]);
+            break;
+          }
+        }
+      }
+      console.log(nonEmptyTextParts.length, selectedDescendants.length);
+    }
+    
+    function addLangOptions(voices){
+      let select = document.getElementById('voicesSelectId');
+      for (let i = 0; i < voices.length; i++) {
+        const voice = voices[i];
+        let option = document.createElement('option');
+        option.value = i;
+        option.innerHTML = (i+1) + ") " + voice.lang;
+        option.setAttribute('data-lang', voice.lang);
+        option.setAttribute('data-name', voice.name);
+        option.setAttribute('data-voiceURI', voice.voiceURI);
+        select.appendChild(option);
+      }
+      
+      document.getElementById('status').innerText = "Voices Successfully Loaded ...";
+      selectPreviousVoice();
+    }
+    
+    function selectPreviousVoice(){
+       let select = document.getElementById('voicesSelectId');
+
+       let selectedVoice = localStorage.getItem("selectedVoice");
+       // console.log(selectedVoice);
+       if(selectedVoice == null){
+         selectedVoice = 1;
+         localStorage.setItem("selectedVoice", 1);
+       }
+
+       select.value = parseInt(selectedVoice);
+    }
+        
+    document.getElementById('voicesSelectId').onchange = function() {
+      let select = document.getElementById('voicesSelectId');
+      localStorage.setItem("selectedVoice", select.value);
+    }    
+    
+    function startReading(){
+      window.speechSynthesis.cancel();
+      
+      stopButtonPressed = false;
+      let speaker = new SpeechSynthesisUtterance();
+      let voices = window.speechSynthesis.getVoices();
+      
+      let select = document.getElementById('voicesSelectId');
+      let selectIndex = parseInt(select.value);
+      speaker.voice = voices[selectIndex];
+      
+      let rate = parseFloat(document.getElementById('rate').value);
+      let pitch = parseFloat(document.getElementById('pitch').value);
+      speaker.rate = rate;
+      speaker.pitch = pitch;
+      
+      let currentBabyChild = $(selectedDescendants[currentDescendantNo][0]);
+      
+      currentBabyChild.css({'background-color': 'yellow'});
+      
+      let scrollTop = currentBabyChild.offset().top;
+      let sentence = selectedDescendants[currentDescendantNo][1];
+      
+      $('html, body').animate({
+        scrollTop: scrollTop - $(window).height() / 2
+      }, 500);
+      
+      speaker.text = sentence;
+      window.speechSynthesis.speak(speaker);
+      
+      speaker.addEventListener('end', function () {
+        if(stopButtonPressed == false && currentDescendantNo < selectedDescendants.length){
+          currentBabyChild.css({'background-color': 'orange'});
+          currentDescendantNo++;
+          startReading();
+        }
+      });
+    }
+        
+    let stopButtonPressed = false;
+    document.getElementById('stop').addEventListener('click', function(){
+      stopButtonPressed = true;
+    });
+        
+    function stopReading(){
+      window.speechSynthesis.cancel();
+    }
+    
+    </script>
+  </body>
+</html>
+
+

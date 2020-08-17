@@ -1,0 +1,112 @@
+<html>
+    <head>
+        <title>Zoom Reader</title>
+        <style>
+            #the-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                /* width: 100%; */
+            }
+            #zoom-reader {
+                border: 1px solid black;
+                direction: ltr;
+                /* width: 100%; */
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div style="text-align: center;">
+            <input id="uploadText" type="file" onchange="readFile();" /><br/>
+            <canvas id="zoom-reader"></canvas><br/>
+            <canvas id="the-canvas"></canvas>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+        <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+
+        <script>
+            var pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,            
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+            function readFile(){
+                file = document.getElementById("uploadText").files[0];
+
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function() {
+                    readPDF(reader.result);
+                };
+
+                reader.onerror = function() {
+                    console.log(reader.error);
+                };
+            }
+
+            function readPDF(result){
+                var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+                // console.log(pdfData);
+
+                pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                    pdfDoc = pdfDoc_;
+
+                    var pageNumber = 5;
+                    pdfDoc.getPage(pageNumber).then(function(page) {
+                        console.log('Page loaded');
+                        
+                        var scale = 2.0;
+                        var viewport = page.getViewport({scale: scale});
+
+                        // Prepare Canvas Using PDF Page Dimensions
+                        var canvas = document.getElementById('the-canvas');
+                        var context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        console.log(canvas.width, canvas.height);
+
+                        // Render PDF Page Into Canvas Context
+                        var renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+
+                        var renderTask = page.render(renderContext);
+                        renderTask.promise.then(function () {
+                            console.log('Page rendered');
+                            var x = 0;
+                            var y = 200;
+                            setInterval(function(){
+
+                                var imgData = context.getImageData(x, y, 600, 300);
+                                // console.log(imgData);
+
+                                var zoomcanvas = document.getElementById('zoom-reader');
+                                zoomcanvas.width = 600;
+                                zoomcanvas.height = 300;
+
+                                var zoomctx = zoomcanvas.getContext('2d');
+                                zoomctx.scale(2, 2);
+                                zoomctx.putImageData(imgData, 0, 0);
+                                zoomctx.drawImage( zoomcanvas, 0, 0, 2*zoomcanvas.width, 2*zoomcanvas.height );
+                                
+                                x += 20;
+                                if(x > canvas.width){
+                                    x = 0;
+                                    y += 100;
+                                }
+                            }, 100);
+                        });
+                    });
+                });
+            }
+
+                        
+        </script>
+    </body>
+</html>

@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <title>Get Positions</title>
+        <style>
+            #the-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                /* width: 100%; */
+            }
+
+            #cropped-canvas {
+                border: 1px solid black;
+                direction: ltr;
+                /* width: 100%; */
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div style="text-align: center;" class="fixed">
+            <input id="uploadText" type="file" onchange="readFile();" /><br/>
+            <canvas id="cropped-canvas"></canvas><br/>
+            <canvas id="the-canvas" style="height:100%"></canvas>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js" integrity="sha256-O6polm3ZRTZEOAneYbvsKty3c3KRcDf20McwtlCga5s=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.worker.min.js" integrity="sha256-dPKjB+ZV5UvcQHA/0f5M+xey9A5jn7DKmDvALGCaW8c=" crossorigin="anonymous"></script>
+        <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+
+        <script>
+            var pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,            
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+            function readFile(){
+                file = document.getElementById("uploadText").files[0];
+
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function() {
+                    readPDF(reader.result);
+                };
+
+                reader.onerror = function() {
+                    console.log(reader.error);
+                };
+            }
+
+            function readPDF(result){
+                var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+                // console.log(pdfData);
+
+                pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                    pdfDoc = pdfDoc_;
+
+                    var pageNumber = 5;
+                    pdfDoc.getPage(pageNumber).then(function(page) {
+                        page.getTextContent().then(function(textContent){
+                            var pageItems = textContent.items;
+                            
+                            renderTransformed(page, pageItems);
+                        });
+                    });
+                });
+            }
+
+            function renderTransformed(page, pageItems){
+                var i = 0;
+                setInterval(function(){
+                    var scale = 1.0;
+                    var viewport = page.getViewport({scale: scale});
+
+                    // var tx = pdfjsLib.Util.transform(viewport.transform, pageItems[i].transform);
+                    // var posX = tx[4];
+                    // var posY = tx[5];
+
+                    var posX = pageItems[i].transform[4];
+                    var posY = pageItems[i].transform[5];
+                    var zoom = 1.0;
+    
+                    var vwidth = viewport.width;
+                    var vheight = viewport.height;
+                    // console.log(viewport.transform[zoom]);
+                    let pX = posX * (zoom - 1);
+                    let pY = vheight + (zoom - 1) * posY;
+                    viewport.transform = [zoom, 0, 0, -zoom, -pX, pY];
+                    
+                    // console.log(pX, pY, pageItems[i].str, pageItems[i]);
+                    console.log(pX, pY, pageItems[i].str);
+                    var cropheight = pageItems[i].height;
+                    var cropwidth = pageItems[i].width;
+
+                    // Prepare canvas using PDF page dimensions
+                    var canvas = document.getElementById('the-canvas');
+                    var context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // 
+                    
+
+                    // Render PDF page into canvas context
+                    var renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+
+                    var renderTask = page.render(renderContext);
+                    renderTask.promise.then(function () {
+                        // var imgData = context.getImageData(0, 0, vwidth, vheight);
+                        var imgData = context.getImageData(pX, vheight - pY, cropwidth * zoom, cropheight * zoom);
+                        // console.log(imgData);
+
+                        var croppedcanvas = document.getElementById('cropped-canvas');
+                        var croppedcontext = croppedcanvas.getContext('2d');
+                        croppedcontext.putImageData(imgData, 0, 0);
+                    });   
+                    i++;
+                }, 1000);
+            }
+        </script>
+    </body>
+</html>

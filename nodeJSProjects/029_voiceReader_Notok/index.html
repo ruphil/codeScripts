@@ -1,0 +1,307 @@
+<html>
+<head>
+    <title>Voice Reader</title>
+    <link href="" rel="stylesheet"/>
+    <style>
+        button {
+                color: green;
+        }
+
+        input[type="file"]{
+            color: green;
+        }
+
+        input[type=number] {
+                width: 60px;
+        }
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        select {
+                color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <table border="1" width="100%" height="100%">
+        <tr>
+            <td align="middle" width="10%">
+                <input id="uploadText" type="file" onchange="readFile();" /><br/><br/>
+                <button id="prev">Previous</button><br/><br/>
+                <button id="next">Next</button><br/><br/>
+                <span>Page:</span><br/>
+                <input type="number" id="page_num" min="1"/> / <input type="text" id="page_count" disabled size="3"/>
+                <br/><br/>
+                <button onclick="loadPage();">Load Page</button>
+            </td>
+            <td align="middle">
+                <div id="status" style="border: 1px solid green; min-height: 20px;"></div><br/><br/>
+                <canvas id="the-canvas"></canvas>
+            </td>
+            <td align="middle" width="10%">
+                Rate: <output id="rateOut"></output>
+                <input type="range" id="rate" min="0.1" max="10" step="0.1" value="5" oninput="rateOut.value = rate.value"><br/><br/>
+                Pitch: <output id="pitchOut">0</output>
+                <input type="range" id="pitch" min="0" max="2" step="0.1" value="0" oninput="pitchOut.value = pitch.value"><br/><br/>
+                Voices: <select id="voicesSelectId"></select><br/><br/>
+                <button onclick="startSpeaking();">Read Aloud</button><br/><br/>
+                <button onclick="pauseSpeaking();">Pause</button><br/><br/>
+                <button onclick="resumeSpeaking();">Resume</button><br/><br/>
+                <button onclick="stopSpeaking();">Shut Up</button><br/><br/>
+            </td>
+        </tr>
+    </table>
+    <div id="currentPageTextStore" style="display: none;"></div>
+    <script src="pdf.min.js"></script>
+    <script src="pdf.worker.min.js"></script>
+    <script>
+        var pdfDoc = null,
+        pageNum = 1,
+        pageRendering = false,
+        pageNumPending = null,            
+        canvas = document.getElementById('the-canvas'),
+        ctx = canvas.getContext('2d');
+
+        function readFile(){
+            file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDF(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function readPDF(result){
+            var pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                document.getElementById('page_count').value = pdfDoc.numPages;
+                document.getElementById('page_num').max = pdfDoc.numPages;
+
+                renderPage(pageNum);
+            });
+        }
+
+        function renderPage(num) {
+            pageRendering = true;
+
+            var scale = 1.0;
+            pdfDoc.getPage(num).then(function(page) {
+                // console.log(num);
+                page.getTextContent().then(function(textContent){
+                    var pageItems = textContent.items;
+                    var sentenceArry = [];
+                    for (let i = 0; i < pageItems.length; i++){
+                        sentenceArry.push(pageItems[i].str);
+                    }
+                    let sentence = sentenceArry.join(" ");
+                    document.getElementById('currentPageTextStore').innerText = sentence;
+                });
+
+                var viewport = page.getViewport({scale: scale});
+                
+                var pwidth = viewport.width;
+                var pheight = viewport.height;
+                
+                canvas.width = pwidth;
+                canvas.height = pheight;
+
+                // Render PDF page into canvas context
+                var renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                document.getElementById('the-canvas').style.height = window.innerHeight * 0.8;
+
+                var renderTask = page.render(renderContext);
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            document.getElementById('page_num').value = num;
+        }
+
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        function loadPage(){
+            pageNum = parseInt(document.getElementById('page_num').value);
+            if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+                return;
+            }
+            queueRenderPage(pageNum);
+        }
+
+        window.speechSynthesis.getVoices();
+        let speaker = null;
+        window.onload = function(){
+            document.getElementById('status').innerText = "Please Wait, Voices Loading ...";
+            setTimeout(() => {
+                var voices = window.speechSynthesis.getVoices();
+                console.log(voices);
+                addLangOptions(voices);
+            }, 2000);
+        }
+
+        function addLangOptions(voices){
+            let select = document.getElementById('voicesSelectId');
+            for (let i = 0; i < voices.length; i++) {
+                const voice = voices[i];
+                let option = document.createElement('option');
+                option.value = i;
+                option.innerHTML = (i+1) + ") " + voice.lang;
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                option.setAttribute('data-voiceURI', voice.voiceURI);
+                select.appendChild(option);
+            }
+            document.getElementById('status').innerText = "Voices Successfully Loaded ...";
+            select.value = 1;
+        }
+
+        var index = 0;
+        var lastWordReached = false;
+        var lastWordEncountered = false;
+        
+        function constructChunks(){
+            var characters = 1000;
+            var thisChunk = "";
+
+            while(thisChunk.length < characters){
+                var currentWord = words[index];
+                thisChunk += currentWord + " ";
+                index++;
+
+                if(thisChunk.length > characters / 2 && currentWord.includes(".")){
+                    break;
+                }
+
+                if(index >= words.length){
+                    console.log(index, words.length);
+                    lastWordReached = true;
+                    break;
+                }
+            }
+
+            return thisChunk;
+        }
+
+        var words = [];
+        function startSpeaking(){
+            var sentence = document.getElementById('currentPageTextStore').innerText;
+            
+            if(sentence == ""){
+                document.getElementById('status').innerText = "Nothing To Read ...";
+                return;
+            }
+
+            let rate = parseFloat(document.getElementById('rate').value);
+            let pitch = parseFloat(document.getElementById('pitch').value);
+
+            let select = document.getElementById('voicesSelectId');
+            let selectIndex = parseInt(select.value);
+
+            let lang = select[selectIndex].getAttribute('data-lang');
+            let voiceURI = select[selectIndex].getAttribute('data-voiceURI');
+
+            speaker = new SpeechSynthesisUtterance();
+            let voices = window.speechSynthesis.getVoices();
+            speaker.voice = voices[selectIndex];
+
+            speaker.rate = rate;
+            speaker.pitch = pitch;
+
+            words = sentence.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ').split(" ");
+
+            stopButtonpressed = false;
+            lastWordEncountered = false;
+
+            setTimeout(function(){
+                readOutLoud();
+            }, 2000);
+
+            document.getElementById('status').innerText = "Now Reading in 2 Seconds...";
+
+            speaker.addEventListener('end', function () {
+                readOutLoud();
+            });
+        }
+
+        function readOutLoud(){
+            if(!stopButtonpressed && !lastWordEncountered){
+                let thisChunk = constructChunks();
+                
+                speaker.text = thisChunk;
+                speechSynthesis.speak(speaker);
+                // console.log(speaker);
+                console.log(speaker.text);
+                if(lastWordReached == true){
+                    lastWordEncountered = true;
+                    index = 0;
+                }
+            }
+        }
+
+        function pauseSpeaking(){
+            speechSynthesis.pause();
+            document.getElementById('status').innerText = "Paused ...";
+        }
+
+        function resumeSpeaking(){
+            speechSynthesis.resume();
+            document.getElementById('status').innerText = "Resumed ...";
+        }
+
+        var stopButtonpressed = false;
+        function stopSpeaking(){
+            stopButtonpressed = true;
+            speechSynthesis.cancel();
+            document.getElementById('status').innerText = "Cancelling Speech Synthesis ...";
+            index = 0;
+        }
+    </script>
+</body>
+</html>

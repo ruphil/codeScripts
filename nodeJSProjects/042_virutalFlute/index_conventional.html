@@ -1,0 +1,148 @@
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.1.3/howler.core.min.js" integrity="sha256-KNY0IDDc9kAie/G8wTJ9BeGjBRqoPgadY2FQM0JmdYc=" crossorigin="anonymous"></script>
+<script>
+    let fadeTime = 200;
+    console.log("Wait... Audio Loading...")
+    var sound = new Howl({
+        src: ['audio/finalSingleTrackMonoCBR192kbps.mp3'],
+        sprite: {
+            sa: [2000, 3000],
+            ri1: [6000, 3000],
+            ri2: [12000, 3000],
+            ga2: [16000, 3000],
+            ga3: [22000, 3000],
+            ma1: [26000, 3000],
+            ma2: [32000, 3000],
+            pa: [36000, 3000],
+            dha1: [42000, 3000],
+            dha2: [46000, 3000],
+            ni2: [52000, 3000],
+            ni3: [56000, 3000],
+            saH: [62000, 3000]
+        },
+        loop: true,
+        volume: 1,
+        onfade: function(id){
+            sound.stop(id);
+        }
+    });
+
+    sound.once('load', function(){
+        console.log('Loaded!');
+    });
+
+    // Fires when the sound finishes playing.
+    sound.on('end', function(){
+        console.log('Finished!');
+    });
+</script>
+<script>
+    var isShift;
+    var keysPressed = {};
+    
+    window.onkeydown = function(e){
+        if(!keysPressed.hasOwnProperty(e.code)){
+            if (window.event) {
+                key = window.event.keyCode;
+                isShift = !!window.event.shiftKey; // typecast to boolean
+            } else {
+                isShift = !!ev.shiftKey;
+            }
+
+            var id;
+            switch(e.code){
+                case 'KeyA':
+                    id = sound.play('sa');
+                    console.log('Sa');
+                    break;
+                case 'KeyS':
+                    if(isShift){ // With Shift
+                        id = sound.play('ri1');
+                        console.log('Ri1');
+                    } else {
+                        id = sound.play('ri2');
+                        console.log('Ri2');
+                    }
+                    break;
+                case 'KeyD':
+                    if(isShift){ // With Shift
+                        id = sound.play('ga2');
+                        console.log('Ga2');
+                    } else {
+                        id = sound.play('ga3');
+                        console.log('Ga3');
+                    }
+                    break;
+                case 'KeyF':
+                    if(isShift){ // With Shift
+                        id = sound.play('ma2');
+                        console.log('Ma2');
+                    } else {
+                        id = sound.play('ma1');
+                        console.log('Ma1');
+                    }
+                    break;
+                case 'KeyJ':
+                    id = sound.play('pa');
+                    console.log('Pa');
+                    break;
+                case 'KeyK':
+                    if(isShift){ // With Shift
+                        id = sound.play('dha1');
+                        console.log('Dha1');
+                    } else {
+                        id = sound.play('dha2');
+                        console.log('Dha2');
+                    }
+                    break;
+                case 'KeyL':
+                    if(isShift){ // With Shift
+                        id = sound.play('ni3');
+                        console.log('Ni3');
+                    } else {
+                        id = sound.play('ni2');
+                        console.log('Ni2');
+                    }
+                    break;
+                case 'Semicolon':
+                    id = sound.play('saH');
+                    console.log('SaH');
+                    break;
+                default:
+                    console.log(2);
+                    return;        
+                    break;          
+            }
+            
+            keysPressed[e.code] = id;
+            // console.log(keysPressed);
+        }
+    }
+
+    window.onkeyup = function(e){
+        sound.fade(1, 0, fadeTime, keysPressed[e.code]);
+        delete keysPressed[e.code];
+    }
+</script>
+</body>
+
+<!-- Approach 1 : For making flute continous -->
+<!-- window.onkeyup = function(e){
+    let id = sound.play('ga2');
+    setTimeout(function(){
+        sound.stop(id);
+    }, 5);
+    sound.stop(keysPressed[e.code]);
+    delete keysPressed[e.code];
+    console.log(keysPressed);
+} -->
+
+<!-- Approach 2
+sound.fade(1, 0, 300, keysPressed[e.code]); -->
+
+<!-- Approach 3
+setTimeout(function(){
+    sound.stop(keysPressed[e.code]);
+    delete keysPressed[e.code];
+    // console.log(keysPressed);
+}, 300); -->

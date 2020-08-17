@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      button {
+        font-size: 16px;
+      }
+      table {
+        font-size: 22px;
+      }
+      th, td {
+        padding: 15px;
+      }
+      *[tooltip]:focus:after {
+        content: attr(tooltip);
+        display: block;
+        position: absolute;
+        padding: 10px;
+        font-style: italic;
+        font-style: bold;
+      }
+      input[type="checkbox"]{
+        width: 30px; /*Desired width*/
+        height: 30px; /*Desired height*/
+      }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
+  </head>
+  <body>
+    <table align="center">
+      <tr><td><h1>SAHYOG-KGDC REPORTS</h1></td></tr>
+      <tr><td align="center">
+        <div id="main-content">
+          <input id="mobile" type="number" style="font-size:50px;" placeholder="Enter Mobile Number"/><br/><br/>
+          <button onclick="checkNumber()"><span style="font-size:50px;">Next</span></button>
+          <div><h4 id="testarea"></h4></div>
+        </div>
+      </td></tr>
+    </table>
+    
+    <div id="mobilenumbercontent" style="display: none;">
+      <input id="mobile" type="number" style="font-size:50px;" placeholder="Enter Mobile Number"/><br/><br/>
+      <button onclick="checkNumber()"><span style="font-size:50px;">Next</span></button>
+    </div>
+
+    <div id="signupcontent" style="display: none;">
+      <div><h2 id="mobilenumber"></h2></div>
+      <input id="name" type="text" style="font-size:50px;" placeholder="Your Full Name"/><br/><br/>
+      <input id="designation" type="text" style="font-size:50px;" placeholder="Your Designation"/><br/><br/>
+      <input id="password" type="password" style="font-size:50px;" placeholder="Your Password"/><br/><br/>
+      <input type="checkbox" onclick="showPassword()" style="font-size:50px;"><span style="font-size:50px;">Show Password</span><br/><br/>
+      <div style="font-size:50px;">Features Collected Till Yesterday</div><br/>
+      <input id="totalFeatures" type="number" style="font-size:50px;" value="0" placeholder="Features Collected"/><br/><br/>
+      <button onclick="registerUser()"><span style="font-size:50px;">Register</span></button>
+      <div><h4 style="color:green" id="registrationcomplete"></h4></div>
+    </div>
+    
+    <div id="passwordcontent" style="display: none;">
+      <div><h2 id="mobnum"></h2></div>
+      <input id="passwd" type="password" style="font-size:50px;" placeholder="Your Password"/><br/><br/>
+      <button onclick="checkPassword()"><span style="font-size:50px;">Sign In</span></button>
+      <div><h4 style="color:red" id="passwordincorrect"></h4></div>
+    </div>
+    
+    <div id="userpagecontent" style="display: none;">
+      <table border="1" style="border-collapse: collapse;">
+        <tr><td>Name</td><td colspan=2><span id="nameData"></span></td></tr>
+        <tr><td>Designation</td><td colspan=2><span id="designationData"></span></td></tr>
+        <tr><td>Data Collected Till Yesterday</td><td id="yesterdaysDate">DATE</td><td id="data" align="center">DATA</td></tr>
+        <tr><td id="todaysDataDate"></td><td colspan=2><input id="todaysData" style="font-size:20px" type="number" value="0"/></td></tr>
+        <tr><td align="center"><button id="submitButton" onclick=submitData();><span style="font-size:22px">Submit</span></button></td><td align="center"><button onclick=editData();><span style="font-size:22px">Edit</span></button></td><td align="center"><button onclick=downloadReport();><span style="font-size:22px">KGDC Report</span></button></td></tr>
+      </table>
+      <div><h4 style="color:green" id="datasubmission"></h4></div>
+    </div>
+    
+    <div id="mobileNumberHolder" style="display: none;"></div>
+    <div id="passwordHolder" style="display: none;"></div>
+    <div id="columnIndex" style="display: none;"></div>
+    <div id="totalCountTillYesterday" style="display: none;"></div>
+  
+    <div style="position: fixed;top:10px;left:10px;">
+      <button tooltip="Coordinator, SAHYOG"><i class="fa fa-info-circle fa-lg" onclick=""></i></button>
+    </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js" integrity="sha384-NaWTHo/8YCBYJ59830LTz/P4aQZK1sS0SneOgAvhsIl3zBu8r9RevNg5lHCHAuQ/" crossorigin="anonymous"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script src="https://momentjs.com/downloads/moment-with-locales.js"></script>
+  <script>
+  window.html2canvas = html2canvas;
+  
+  function showPassword() {
+    var x = document.getElementById("password");
+    if (x.type === "password") {
+      x.type = "text";
+    } else {
+      x.type = "password";
+    }
+  }
+  
+  function registrationComplete(){
+    document.getElementById('registrationcomplete').innerHTML = "Registration Completed. Sign In to Proceed";
+    document.getElementById('registrationcomplete').style.color = "green";
+    
+    setTimeout(function(){
+      var mobilenumbercontent = document.getElementById('mobilenumbercontent').innerHTML;
+      document.getElementById('main-content').innerHTML = mobilenumbercontent;
+    }, 1500);
+    
+  }
+  
+  function registerUser(){
+    var mobile = document.getElementById('mobileNumberHolder').innerText;
+    var name = document.getElementById('name').value;
+    var designation = document.getElementById('designation').value;
+    var password = document.getElementById('password').value;
+    var totalFeatures = document.getElementById('totalFeatures').value;
+    
+    if(name != "" && designation != "" && password != ""){
+      google.script.run.withSuccessHandler(registrationComplete).registerUser([mobile, name, designation, password, totalFeatures]);
+    }
+    else {
+      alert("Fill All Details");
+    }
+    
+  }
+  
+  function dataSubmitted(){
+    document.getElementById('datasubmission').innerHTML = "Today's Data Successfully Submitted";
+    document.getElementById('datasubmission').style.color = "green";
+  }
+  
+  function submitData(){
+    var columnIndex = parseInt(document.getElementById('columnIndex').innerText);
+    var password = document.getElementById('passwordHolder').innerText;
+    var totalData = parseInt(document.getElementById('totalCountTillYesterday').innerText) + parseInt(document.getElementById('todaysData').value);
+    
+    google.script.run.withSuccessHandler(dataSubmitted).submitData([columnIndex, password, totalData]);
+    
+    document.getElementById('todaysData').disabled = true;
+    document.getElementById('submitButton').disabled = true;
+  }
+  
+  function editData(){
+    document.getElementById('todaysData').disabled = false;
+    document.getElementById('submitButton').disabled = false;
+    document.getElementById('datasubmission').innerHTML = "";
+  }
+  
+  function whetherPasswordOK(data){
+    if(data == true){
+      document.getElementById('passwordHolder').innerText = document.getElementById('passwd').value;
+      document.getElementById('passwordincorrect').innerHTML = "Sign In Successful";
+      document.getElementById('passwordincorrect').style.color = "green";
+      setTimeout(loadUserPage, 1500);
+    } else {
+      document.getElementById('passwordincorrect').innerHTML = "Password Incorrect";
+      document.getElementById('passwordincorrect').style.color = "red";
+    }
+  }
+  
+  function checkPassword(){
+    document.getElementById('passwordincorrect').innerHTML = "";
+    var columnIndex = parseInt(document.getElementById('columnIndex').innerText);
+    var password = document.getElementById('passwd').value;
+    google.script.run.withSuccessHandler(whetherPasswordOK).checkPassword([columnIndex, password]);
+  }
+  
+  function handleUserPageData(userDetails){
+    var userPageContent = document.getElementById('userpagecontent').innerHTML;
+    document.getElementById('main-content').innerHTML = userPageContent;
+//    console.log(userDetails);
+    document.getElementById('nameData').textContent = userDetails[2][0];
+    document.getElementById('designationData').textContent = userDetails[3][0];
+    
+    document.getElementById('yesterdaysDate').innerHTML = moment().subtract(1, 'day').format('DD-MM-YYYY');
+    document.getElementById('todaysDataDate').innerHTML = "Today's Data (" + moment().format('DD-MM-YYYY') + ")";
+    
+    var collectedTillYesterday = 0;
+    for (var i = userDetails.length - 2; i > 5; i--){
+      if (userDetails[i][0] != ""){
+        collectedTillYesterday = userDetails[i][0];
+        break;
+      }
+    }
+    
+    var collectedTodaysDate = 0;
+    if (userDetails[userDetails.length - 1][0] != ""){
+      collectedTodaysDate = userDetails[userDetails.length - 1][0] - collectedTillYesterday;
+      document.getElementById('todaysData').value = collectedTodaysDate;
+      document.getElementById('todaysData').disabled = true;
+      document.getElementById('submitButton').disabled = true;
+    }
+    
+    document.getElementById('data').innerHTML = collectedTillYesterday;
+    document.getElementById('totalCountTillYesterday').innerText = collectedTillYesterday;
+  }
+  
+  function loadUserPage(){
+    var columnIndex = parseInt(document.getElementById('columnIndex').innerText);
+    var password = document.getElementById('passwordHolder').innerText;
+//    console.log(columnIndex);
+    google.script.run.withSuccessHandler(handleUserPageData).getUserDetails([columnIndex, password]);
+  }
+  
+  function handleNumbersData(data){
+    if (data == ""){
+      loadUserSignUP();
+    }
+    else {
+      var numbers = data[0];
+      var userMobile = parseInt(document.getElementById('mobile').value);
+      var columnIndex = numbers.indexOf(userMobile);
+      if(columnIndex != -1){
+        console.log("User Available");
+        document.getElementById('columnIndex').innerText = columnIndex + 2;
+        loadPasswordPage();
+      } else {
+        console.log("User Not Available");
+        loadUserSignUP();
+      }
+    }
+    
+  }
+  
+  function loadPasswordPage(){
+    var passwordContent = document.getElementById('passwordcontent').innerHTML;
+    document.getElementById('main-content').innerHTML = passwordContent;
+    document.getElementById('mobnum').innerHTML = "Mobile Number: " + document.getElementById('mobileNumberHolder').innerText;
+  }
+  
+  function loadUserSignUP(){
+    var signupcontent = document.getElementById('signupcontent').innerHTML;
+    document.getElementById('main-content').innerHTML = signupcontent;
+    document.getElementById('mobilenumber').innerHTML = "Mobile Number: " + document.getElementById('mobileNumberHolder').innerText;
+  }
+  
+  function checkNumber(){
+    if(everythingOK()){
+      google.script.run.withSuccessHandler(handleNumbersData).getMobileNumbers();
+      document.getElementById('mobileNumberHolder').innerText = document.getElementById('mobile').value.toString();
+    }
+  }
+  
+  function everythingOK(){
+    var userMobile = document.getElementById('mobile').value.toString();
+    console.log(userMobile);
+    if(userMobile == ""){
+      alert("Enter Valid Mobile Number");
+      return false;
+    }
+    else if(isNaN(userMobile)){
+      alert("Enter Valid Mobile Number");
+      return false;
+    }
+      else if(userMobile.length != 10){
+      alert("Enter Valid Mobile Number");
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+  
+  function handleDownloadReportsData(data){
+    console.log(data);
+    var seniorityData = data[0];
+    var namesReport = data[1]
+    var lastrowRow = data[2];
+    var reportsXL = data[3];
+    
+    var totalKGDCSum = 0;
+    for (var k = 0; k < lastrowRow[0].length; k++){
+      if(lastrowRow[0][k] != ""){
+        totalKGDCSum += parseInt(lastrowRow[0][k]);
+      }
+    }
+    
+    var tableStr = "<table border='1' style='border-collapse: collapse;'>";
+    tableStr += "<tr><td colspan='9' align='center'><h1 style='display:inline-block'>KGDC - SAHYOG REPORT AS ON " + genDate(0) + "</h1></td></tr>";
+    tableStr += "<tr><td colspan='4' align='center'><h2 style='display:inline-block'>KGDC Grand Total Till</h2></td><td colspan='2' align='center'>" + genDate(0) + "</td><td colspan='3' align='left'><h2 style='display:inline-block'>" + totalKGDCSum + "</h2></td></tr>";
+    tableStr += "<tr><td rowspan='2' align='center'><h3 style='display:inline-block'>S.No</h3></td><td rowspan='2' align='center'><h3 style='display:inline-block'>Name</h3></td><td rowspan='2' align='center'><h3 style='display:inline-block'>Designation</h3></td><td colspan='5' align='center'><h3 style='display:inline-block'>Point of Interest Created Till</h3></td><td rowspan='2' align='center'><h3 style='display:inline-block'>Total POI</h3></td></tr>";
+    tableStr += "<tr><td><h4 style='display:inline-block'>" + genDate(4) + "</h4></td><td><h4 style='display:inline-block'>" + genDate(3) + "</h4></td><td><h4 style='display:inline-block'>" + genDate(2) + "</h4></td><td><h4 style='display:inline-block'>" + genDate(1) + "</h4></td><td><h4 style='display:inline-block'>" + genDate(0) + "</h4></td></tr>";
+    
+    for (var i = 0; i < seniorityData.length; i++){
+//  for (var i = 0; i < 6; i++){
+      var name = seniorityData[i][1];
+    
+      var colIndex = 0;
+      var nameFound = 0;
+      for (var j = 0; j < namesReport[0].length; j++){
+        if (name == namesReport[0][j]){
+          colIndex = j;
+          var nameFound = 1;
+          break;
+        } 
+      }
+    
+      if (nameFound == 1){
+        var day1 = reportsXL[0][colIndex];
+        var day2 = reportsXL[1][colIndex];
+        var day3 = reportsXL[2][colIndex];
+        var day4 = reportsXL[3][colIndex];
+        var day5 = reportsXL[4][colIndex];
+        
+        totalPOI = lastrowRow[0][colIndex];
+        
+        if(day5 == "") day5 = totalPOI;
+        if(day4 == "") day4 = day5;
+        if(day3 == "") day3 = day4;
+        if(day2 == "") day2 = day3;
+        if(day1 == "") day1 = day2;
+      
+        tableStr += "<tr><td align='center'>" + seniorityData[i][0] + "</td><td>" + name + "</td><td align='center'>" + seniorityData[i][2]  + "</td><td align='center'>" + day1 + "</td><td align='center'>" + day2  + "</td><td align='center'>" + day3 + "</td><td align='center'>" + day4 + "</td><td align='center'>" + day5 + "</td><td align='center'><h3 style='display:inline-block'>" + totalPOI + "</h3></td></tr>";
+      }
+      else {
+        tableStr += "<tr><td align='center'>" + seniorityData[i][0] + "</td><td>" + name + "</td><td align='center'>" + seniorityData[i][2]  + "</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+      }
+    }
+    
+    tableStr += "<tr><td colspan='7' align='right'><h3 style='display:inline-block'>Total</h3></td><td colspan='2' align='center'><h3 style='display:inline-block'>" + totalKGDCSum + "</h3></td></tr>";
+    tableStr += "</table>";
+    
+//    document.getElementById('testarea').innerHTML = tableStr;
+    var printWindow = window.open('', '', 'height=600, width=800');
+    printWindow.document.write('<html><head><title>Sahyog KGDC Report</title>');
+    printWindow.document.write('</head><body >');
+    printWindow.document.write(tableStr);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    
+    
+//    var doc = new jsPDF({
+//      unit: 'in',
+//      format: [8, 10]
+//    });
+//    doc.html(tableStr, {
+//       callback: function (doc) {
+//         var d = new Date();
+//         d.setDate(d.getDate() - backDate);
+//         var dateStr = d.getDate() + "-" + pad((d.getMonth() + 1), 2) + "-" + d.getFullYear();
+//         doc.save('Sahyog KGDC Report.pdf');
+//       }
+//    });
+    document.getElementById('datasubmission').innerHTML = "";
+  }
+  
+  function downloadReport(){
+//    alert("Under Construction");
+    document.getElementById('datasubmission').innerHTML = "Data is Downloading... Please Wait for Few Seconds...";
+    document.getElementById('datasubmission').style.color = "orange";
+    google.script.run.withSuccessHandler(handleDownloadReportsData).downloadReport();
+  }
+
+  function genDate(backDate){
+    var d = new Date();
+    d.setDate(d.getDate() - backDate);
+    var dateStr = d.getDate() + "/" + pad((d.getMonth() + 1), 2) + "/" + d.getFullYear();
+    return dateStr;
+  }
+
+  function pad(str, max) {
+    str = str.toString();
+    return str.length < max ? pad("0" + str, max) : str;
+  }
+
+  </script>  
+  </body>
+</html>

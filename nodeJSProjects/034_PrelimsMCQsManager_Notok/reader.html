@@ -1,0 +1,285 @@
+<html>
+<head>
+    <title>Prelims MCQs Reader</title>
+    <link href="" rel="stylesheet"/>
+    <style>
+        button {
+                color: green;
+        }
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        span {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="border: 2px solid yellow;">
+        <input id="uploadText" type="file" onchange="readFile();" style="width: 150px; color: green;" title="Load File"/>
+        <input type="text" id="current_ques" size="3" title="Current Question" value="1"/>
+        <input type="text" id="ques_count" size="3" title="Total Questions" disabled/>
+        <button id="prev">❮</button>
+        <button id="next">❯</button>
+        <button id="load">Load</button>
+        <input type="number" id="rate" min="0.1" max="10" step="0.1" value="3" title="Rate"/>
+        <input type="number" id="pitch" min="0" max="2" step="0.1" value="0" title="Pitch"/>
+    </div>
+    <div style="border: 2px solid yellow;">
+        <div>
+            <div style="border: 2px solid green;">
+                <span>Question:</span>
+                <button class="play">▶</button>
+                <button class="stop">◼</button>
+            </div>
+            <div id="questionsCanvas"></div>
+            <div id="questionsText" style="display: none;"></div>
+        </div>
+        <div>
+            <div style="border: 2px solid green;">
+                <span class="toggleCanvas" style="cursor: pointer;">Answer:</span>
+                <button class="play">▶</button>
+                <button class="stop">◼</button>
+            </div>
+            <div id="answersCanvas" style="display: none;"></div>
+            <div id="answersText" style="display: none;"></div>
+        </div>
+        <div>
+            <div style="border: 2px solid green;">
+                <span class="toggleCanvas" style="cursor: pointer;">Explanation:</span>
+                <button class="play">▶</button>
+                <button class="stop">◼</button>
+            </div>
+            <div id="explanationsCanvas" style="display: none;"></div>
+            <div id="explanationsText" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="pdf.min.js"></script>
+    <script src="pdf.worker.min.js"></script>
+    <script src="jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        let pdfDoc = null;
+        let socket = io();
+        
+        function readFile(){
+            let file = document.getElementById("uploadText").files[0];
+
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                readPDFNLoadMCQs(reader.result);
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function readPDFNLoadMCQs(result){
+            let pdfData = atob(result.replace('data:application/pdf;base64,', ''));
+            // console.log(pdfData);
+
+            pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+            });
+
+            let fileJSON = document.getElementById("uploadText").files[0].name.split('.').slice(0, -1).join('.') + '.json';
+            console.log(fileJSON);
+            socket.emit("loadMCQJSON", fileJSON);
+        }
+
+        let infoMCQs = [];
+        socket.on("handleJSONMCQs", function(data){
+            infoMCQs = JSON.parse(data);
+            // console.log(infoMCQs);
+
+            putContents();
+        });
+
+        function putContents(){
+            $('#questionsCanvas').html("");
+            $('#answersCanvas').html("");
+            $('#explanationsCanvas').html("");
+
+            $('#questionsText').text("");
+            $('#answersText').text("");
+            $('#explanationsText').text("");
+
+            let maxQuesNo = 1;
+            for(let i = 0; i < infoMCQs.length; i++){
+                let quesInfo = infoMCQs[i];
+                let quesInfoParts = quesInfo.split('-');
+
+                let current_ques = parseInt(quesInfoParts[0]);
+                let currentQuesVal = parseInt($('#current_ques').val());
+                if(currentQuesVal == current_ques){
+                    // console.log(quesInfo);
+                    createCanvasNExtractText(quesInfo);
+                }
+
+                if(maxQuesNo < current_ques){
+                    maxQuesNo = current_ques;
+                }
+            }
+
+            $('#ques_count').val(maxQuesNo);
+        }
+
+        function createCanvasNExtractText(quesInfo){
+            let quesInfoParts = quesInfo.split('-');
+            let ques_type = quesInfoParts[1];
+            let pageNo = parseInt(quesInfoParts[2]);
+            let startCoordX = parseInt(quesInfoParts[3]);
+            let startCoordY = parseInt(quesInfoParts[4]);
+            let endCoordX = parseInt(quesInfoParts[5]);
+            let endCoordY = parseInt(quesInfoParts[6]);
+
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext("2d");
+            let canvasText = "";
+            const scale = 3;
+            pdfDoc.getPage(pageNo).then(function(page){
+
+                let pageHeight = page._pageInfo.view[3];
+                page.getTextContent().then(function(textContent){
+                    let pageItems = textContent.items;
+                    for(let i = 0; i < pageItems.length; i++){
+                        let str = pageItems[i].str;
+                        let X = pageItems[i].transform[4];
+                        let Y = pageHeight - pageItems[i].transform[5];
+
+                        let scaledX = X * scale;
+                        let scaledY = Y * scale;
+
+                        if((startCoordX < scaledX && scaledX < endCoordX) && (startCoordY < scaledY && scaledY < endCoordY)){
+                            canvasText += str.replace(/[^\w\s)?.,%(]/gi, '').replace(/\s\s+/g, ' ');
+                        }
+                    }
+                    // console.log(canvasText);
+
+                    switch (ques_type) {
+                        case 'q':
+                            document.getElementById('questionsText').innerText += canvasText;
+                            break;
+                        case 'a':
+                            document.getElementById('answersText').innerText += canvasText;
+                            break;
+                        case 'e':
+                            document.getElementById('explanationsText').innerText += canvasText;
+                            break;
+                    }
+                });
+
+                let viewport = page.getViewport({
+                    scale: scale,
+                    offsetX: -startCoordX,
+                    offsetY: -startCoordY,
+                });
+
+                canvas.width = endCoordX - startCoordX;
+                canvas.height = endCoordY - startCoordY;
+
+                let renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                page.render(renderContext);
+                $('canvas').css({'width': '65%'});
+            });
+            
+            switch (ques_type) {
+                case 'q':
+                    document.getElementById('questionsCanvas').appendChild(canvas);
+                    break;
+                case 'a':
+                    document.getElementById('answersCanvas').appendChild(canvas);
+                    break;
+                case 'e':
+                    document.getElementById('explanationsCanvas').appendChild(canvas);
+                    break;
+            }
+        }
+
+        $('button').click(function(){
+            let buttonClass = $(this).attr('class');
+            if(buttonClass == 'play'){
+                let textDiv = $(this).parent().parent().children()[2];
+                let text = $(textDiv).text();
+                console.log(text);
+
+                startReading(text)
+            } else if (buttonClass == 'stop'){
+                window.speechSynthesis.cancel();
+            }
+        });
+
+        $('span.toggleCanvas').click(function(){
+            let canvasDiv = $(this).parent().parent().children()[1];
+            // console.log(canvasDiv);
+
+            $(canvasDiv).toggle();
+        });
+
+        window.speechSynthesis.getVoices();
+        window.onload = function(){
+            setTimeout(() => {
+                let voices = window.speechSynthesis.getVoices();
+                console.log(voices);
+            }, 500);
+        }
+
+        function startReading(text){
+            window.speechSynthesis.cancel();
+
+            let rate = parseFloat(document.getElementById('rate').value);
+            let pitch = parseFloat(document.getElementById('pitch').value);
+
+            let speaker = new SpeechSynthesisUtterance();
+            let voices = window.speechSynthesis.getVoices();
+            speaker.voice = voices[1];
+
+            speaker.rate = rate;
+            speaker.pitch = pitch;
+
+            speaker.text = text;
+            window.speechSynthesis.speak(speaker);
+        }
+
+        $('button#prev').click(function(){
+            let currentQues = parseInt($('#current_ques').val());
+            currentQues -= 1;
+            if(currentQues >= 1){
+                $('#current_ques').val(currentQues);
+                putContents();
+            }
+        });
+
+        $('button#next').click(function(){
+            let currentQues = parseInt($('#current_ques').val());
+            currentQues += 1;
+            if(currentQues <= parseInt($('#ques_count').val())){
+                $('#current_ques').val(currentQues);
+                putContents();
+            }
+        });
+
+        $('button#load').click(function(){
+            let currentQues = parseInt($('#current_ques').val());
+            if(currentQues >= 1 && currentQues <= parseInt($('#ques_count').val())){
+                $('#current_ques').val(currentQues);
+                putContents();
+            }
+        });
+    </script>
+</body>
+</html>
