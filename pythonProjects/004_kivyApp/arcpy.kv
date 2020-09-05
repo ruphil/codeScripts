@@ -1,0 +1,11 @@
+#:kivy 1.8.0
+
+<ToolLayout>:
+    cols:2
+    Button:
+        text: 'Select GDB Button'
+        background_color: 0, 0, 1, .85
+        on_press: root.get_parentpath()
+
+    Label:
+        text: root.parentgdbPath
