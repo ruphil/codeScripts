@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="static/css/bootstrap.min.css">
+    <link rel="icon" type="image/png" href="static/favicon.png"/>
+
+    <title>LSMK Register</title>
+    <style>
+        div, small, table, h3, kbd {
+            margin: 1em;
+        }
+
+        input[type="radio"] {
+            margin: 0.5em;
+        }
+    </style>
+  </head>
+  <body>
+    <h1 class="bg-info text-white" style="padding:0.3em">LSMK - Initial Processing and Data Transfer Register</h1>
+    <small class="text-danger">Search Your Flights and Record Information Accordingly...</small><br/>
+    <small class="text-danger">Fields marked * are mandatory</small><br/>
+    <small id="form-data-status" class="text-warning">
+        <span>Please Wait For A Minute... And Try Refreshing... Form is Loading Data after a while... An instance is shooting up in the Server for handling your request in less than 60 Seconds...</span>
+    </small>
+    <hr/>
+    <form id="search-form">
+        <div class="form-group">
+            <label class="text-primary">Select Your Drone Number</label>
+            <select class="form-control bg-secondary text-white" id="dronenumber">
+                <option disabled selected>Select Your Drone Number</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="text-primary">Flight Date</label>
+            <input class="form-control bg-secondary text-white" type="date" id="flightdate">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">Flown Flight Status</label>
+            <select class="form-control bg-secondary text-white" id="flownflightstatus">
+                <option disabled selected>Select Status</option>
+                <option>Ready For Initial Processing</option>
+                <option disabled>Failed Due To Various Reasons</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label id="search-values-status" class="text-warning">Click on Search Flights To Get Flights Information</label><br/>
+            <button type="button" class="btn btn-primary" onclick="searchflights()">Search Flights</button>
+        </div>
+
+    </form>
+
+    <h3 class="text-success">Flight Results</h3>
+
+    <table class="table table-hover" id="results-table">
+        <thead>
+            <tr class="table-success">
+                <th scope="col">#</th>
+                <th scope="col">Pilot / Co-Pilot</th>
+                <th scope="col">Flight Information</th>
+                <th scope="col">Take-Off / Landing Time</th>
+                <th scope="col">Whether Already Updated</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <br/>
+    <div id="flight-data-status" class="bg-dark text-warning">Select the Flight and Fill Details Accordingly</div>
+    <h3 class="text-success">Details of Flight</h3>
+
+    <form id="submit-form">
+        <div class="form-group">
+            <label class="text-primary">1. Initial Processing Done *</label>
+            <select class="form-control bg-danger text-white" id="initialprocessing">
+                <option disabled selected>Select Yes / No</option>
+                <option>Yes</option>
+                <option>No</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="text-warning">Select Initial Processing Output CSV File To Fill Automatically</label><br/>
+            <input type="file" class="form-control-file" id="csv-fileinput" onchange="readCSVOut();">
+            <small id="csv-status" class="text-warning">Select *.csv file</small><br/>
+        </div>
+
+        <div class="form-group">
+            <label class="text-warning">Or Enter Details Manually</label><br/>
+            <label class="text-primary">2. Total Error (m) Before Optimization</label>
+            <input class="form-control bg-danger text-white" type="number" id="initialerror" step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">3. Number of Initial Points</label>
+            <input class="form-control bg-danger text-white" type="number" id="initialpoints" step="1">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">4. Number of Final Points</label>
+            <input class="form-control bg-danger text-white" type="number" id="finalpoints" step="1">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">5. Total Error (m) After Optimization</label>
+            <input class="form-control bg-danger text-white" type="number" id="finalerror" step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label class="text-secondary">Status Of Initial Processing:</label><br/>
+            <kbd class="text-primary" id="initialprocess-status"></kbd>
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">6. Whether Sending To Office *</label>
+            <select class="form-control bg-danger text-white" id="whethersending">
+                <option disabled selected>Select An Option</option>
+                <option>Sending To Office</option>
+                <option>Reflying the Flight</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">7. Folder Name For Sending To Office</label>
+            <input class="form-control bg-danger text-white" type="text" id="folder">
+        </div>
+
+        <small class="text-warning">Right Click The Folder and Choose Properties... Enter Number of Files and File Size From Here...</small><br/>
+        <small class="text-secondary">Enter Correct Number of Files For Checking in Office (While Onward Transmission through FTP)</small>
+
+        <div class="form-group">
+            <label class="text-primary ">8. Number of Files</label>
+            <input class="form-control bg-danger text-white" type="number" id="filescount" step="1">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">9. Folder Size in GB</label>
+            <input class="form-control bg-danger text-white" type="number" id="foldersize" step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">10. Mode of Sending of Data</label>
+            <select class="form-control bg-danger text-white" id="sendingmode">
+                <option disabled selected>Select Mode</option>
+                <option>FTP</option>
+                <option>Harddisk</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">11. Handed Over To</label>
+            <input class="form-control bg-danger text-white" type="text" id="handedoverto">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">12. Handed Over On</label>
+            <input class="form-control bg-danger text-white" type="date" id="handedoveron">
+        </div>
+
+        <div class="form-group">
+            <label class="text-primary">Remarks, If Any</label>
+            <textarea class="form-control text-white" id="anyremarks"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="text-danger" id="outlog">Click on Submit To Send Data To Server</label>
+        </div>
+
+        <div class="form-group">
+            <button type="button" class="btn btn-warning" onclick="printpage()">Print PDF</button>
+            <button type="button" class="btn btn-primary" id="submitdatabutton" onclick="submitdata()">Submit Data</button>
+        </div>
+    </form>
+
+    <script src="static/js/jquery-3.5.1.min.js"></script>
+    <script src="static/js/popper.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    
+    <script>
+        $(document).ready(function(){
+            setOptionalIdsToGreen();
+
+            $.get('/dtdata', null, function(rows) {
+                console.log(rows);
+                
+                let dronenumbers = rows.slice(0, -1);
+                $.each(dronenumbers, function (i, item) {
+                    $('#dronenumber').append($('<option>', {
+                        text : item[0]
+                    }));
+                });
+            })
+            .always(function(e) {
+                if(e[e.length - 1] == 'success'){
+                    $('#form-data-status')
+                    .text('Form is Loaded... You can start Filling...')
+                    .addClass("text-success").removeClass("text-warning");
+                }
+            });
+        });
+    </script>
+    <script>
+        let flightSelected = false;
+        let flightIndexInSheet = 0;
+        let whetherAlreadyUpdated = true;
+        function searchflights(){
+            console.log('Searching Flights...');
+            
+            let getIDs = ['dronenumber', 'flightdate', 'flownflightstatus'];
+            let values = getIDValues(getIDs);
+
+            let searchValues = values.map(function(val){
+                return val[1];
+            });
+            console.log(searchValues);
+
+            let valuesOK = searchValues.every(function (elem) {
+                return elem != "";
+            });
+
+            if(valuesOK){
+                console.log(valuesOK);
+                $.get('/searchflights', { dronenumber: searchValues[0], flightdate: searchValues[1], flownflightstatus: searchValues[2] }, function(rows) {
+                    console.log(rows);
+
+                    $('#results-table tbody').empty();
+                    for (let i = 0; i < rows.length; i++){
+                        // 1 for heading, 1 for 0-index
+                        let index = rows[i][0] + 2;
+
+                        let pilot = rows[i][1][6]
+                        let copilot = rows[i][1][7]
+
+                        let district = rows[i][1][8]
+                        let taluk = rows[i][1][9]
+                        let grampanchayat = rows[i][1][10]
+                        let revenuevillage = rows[i][1][11]
+
+                        let takeoff = rows[i][1][26]
+                        let landing = rows[i][1][27]
+
+                        let alreadyUpdated = rows[i][1][38]
+
+                        let newRow = `<tr>
+                            <td><input class="form-check-input" type="radio" name="flight" value="${index}"></td>
+                            <td>${pilot}<br/>${copilot}</td>
+                            <td>District: ${district}<br/>Taluk: ${taluk}<br/>Gram Panchayat: ${grampanchayat}<br/>Revenue Village: ${revenuevillage}</td>
+                            <td>${takeoff}<br/>${landing}</td>
+                            <td>${alreadyUpdated}</td>
+                        </tr>`;
+
+                        $('#results-table tbody').append(newRow);
+                    }
+
+                    $('input[type=radio][name=flight]').change(function() {
+                        flightIndexInSheet = this.value;
+                        console.log(flightIndexInSheet);
+                        flightSelected = true;
+
+                        $('#flight-data-status').text("Select the Flight and Fill Details Accordingly")
+                        let whetherUpdatedColumn = $(this).parent().parent().children().eq(4).text();
+                        if(whetherUpdatedColumn == "Not Yet"){
+                            whetherAlreadyUpdated = false;
+                        } else {
+                            whetherAlreadyUpdated = true;
+                            $('#flight-data-status').text("Information Already Updated... Select Another...")
+                        }
+                    });
+                });
+            } else {
+                $('#search-values-status')
+                .text('Select Details Before Searching...')
+                .addClass("text-danger").removeClass("text-warning");
+            }
+        }
+    </script>
+
+    <script>
+        let processingFields  = ['initialerror', 'initialpoints', 'finalpoints', 'finalerror']
+        function readCSVOut(){
+            let file = document.getElementById("csv-fileinput").files[0];
+
+            let reader = new FileReader();
+            reader.readAsText(file);
+
+            reader.onload = function() {
+                let result = reader.result
+                
+                let rows = result.split('\r\n');
+                for (let i = 0; i < rows.length; i++){
+                    let rowValues = rows[i].split(',');
+                    
+                    $('#' + processingFields[i]).val(rowValues[2]);
+                }
+
+                console.log(result);
+                checkProcessingValues()
+            };
+
+            reader.onerror = function() {
+                console.log(reader.error);
+            };
+        }
+
+        function checkProcessingValues(){
+            let nullCheck = processingFields.every(function (field, index) {
+                return $('#' + field).val() != ''
+            });
+
+            let qualityCheck = $('#' + processingFields[3]).val() < 0.03 && ($('#' + processingFields[2]).val() >= 0.5 * $('#' + processingFields[1]).val());
+            if (qualityCheck && nullCheck){
+                $('#initialprocess-status').text('Results are OK... Can be Sent To Office...');
+            } else if (nullCheck) {
+                $('#initialprocess-status').text('To Be Reflown... Not Recommended For Sending to Office...');
+            }
+        }
+    </script>
+
+    <script>
+        
+    </script>
+
+    <script>
+        let IDs = ['initialprocessing', 'initialerror', 'initialpoints', 'finalpoints', 'finalerror', 'whethersending', 'folder', 'filescount', 'foldersize', 'sendingmode', 'handedoverto', 'handedoveron', 'anyremarks'];
+        let optionalIDs = ['initialerror', 'initialpoints', 'finalpoints', 'finalerror', 'folder', 'filescount', 'foldersize', 'sendingmode', 'handedoverto', 'handedoveron', 'anyremarks'];
+
+        function submitdata(){
+            if(whetherAlreadyUpdated == true){
+                alert("The Data is Already Available In the Database... Kindly Select Other Flights...");
+                return;
+            }
+
+            if(flightSelected != true){
+                alert("Kindly Select The Flight From the Flight Results...");
+                return;
+            }
+
+            let values = getIDValues(IDs);
+            console.log(values);
+            
+            let valuesOK = values.every(function (elem, index) {
+                if(optionalIDs.includes(elem[0])){
+                    return true
+                } else {
+                    return elem[1] != "";
+                }
+            });
+
+            if(valuesOK && flightSelected && !whetherAlreadyUpdated && flightIndexInSheet != 0){
+                console.log('Sending Data Transfer Report');
+
+                var uploadValues = values.map(function(val){
+                    return val[1];
+                });
+
+                uploadValues.unshift("Updated");
+
+                let dataObj = {
+                    values: [uploadValues],
+                    flightIndexInSheet: flightIndexInSheet
+                };
+
+                console.log(dataObj);
+
+                postDataObj(dataObj);
+            } else {
+                $('#outlog').removeClass("text-success").addClass("text-danger");
+                $('#outlog').text('Check Your Data Properly...');
+            }
+        }
+
+        function getIDValues(IDs){
+            let values = [];
+
+            $.each(IDs, function (i, id) {
+                //console.log($('#' + id).prop('type'));
+                switch($('#' + id).prop('type')){
+                    case 'select-one':
+                        let nullValue = $($('#' + id + ' option')[0]).text()
+                        let value = $('#' + id + ' option:selected').text();
+                        if(value == nullValue){
+                            value = "";
+                        }
+                        values.push([id, value]);
+                        break;
+                    case 'date':
+                        values.push([id, $('#' + id).val()]);
+                        break;
+                    case 'time':
+                        values.push([id, $('#' + id).val()]);
+                        break;
+                    case 'number':
+                        values.push([id, $('#' + id).val()]);
+                        break;
+                    case 'text':
+                        values.push([id, $('#' + id).val()]);
+                        break;
+                    case 'textarea':
+                        values.push([id, $('#' + id).val()]);
+                        break;
+                }
+            });
+
+            return values;
+        }
+
+        function postDataObj(dataObj){
+            $.ajax({
+                type: 'POST',
+                url: '/dtsubmit',
+                data: JSON.stringify(dataObj),
+                contentType: "application/json",
+                dataType: 'json'
+            }).always(function(e) {
+                if(e.responseText == 'success'){
+                    $('#outlog').addClass("text-success").removeClass("text-danger");
+                    $('#outlog').text('Data Successfully Submitted');
+                    console.log('success');
+
+                    // Resetting Form
+                    document.getElementById('submit-form').reset();
+
+                    $('#submit-form input.form-control').removeClass('bg-success').addClass('bg-danger');
+                    $('#submit-form select.form-control').removeClass('bg-success').addClass('bg-danger');
+                    setOptionalIdsToGreen();
+
+                    $('#results-table tbody').empty();
+
+                    $('#csv-fileinput').removeClass("text-success")
+                }
+            });
+        }
+
+        function printpage(){
+            window.print();
+        }
+    </script>
+
+    <script>
+        $('#search-form select').change(function(){
+            $('#search-values-status')
+            .text('Click on Search Flights To Get Flights Information')
+            .addClass("text-warning").removeClass("text-danger");
+        });
+
+        $('#search-form input').change(function(){
+            $('#search-values-status')
+            .text('Click on Search Flights To Get Flights Information')
+            .addClass("text-warning").removeClass("text-danger");
+        });
+    </script>
+    <script>
+        // For Changing Colors Green and Red
+        $('#submit-form div select').change(function(){
+            $(this).removeClass('bg-danger').addClass('bg-success');
+
+            $('#outlog').removeClass("text-success").addClass("text-danger");
+            $('#outlog').text('Click on Submit To Send Data To Server');
+            setOptionalIdsToGreen();
+            checkProcessingValues();
+        });
+
+        $('#submit-form div input').change(function(){
+            //console.log($(this).val());
+            if($(this).val() != ""){
+                $(this).removeClass('bg-danger').addClass('bg-success');
+            } else {
+                $(this).removeClass('bg-success').addClass('bg-danger');
+            }
+
+            $('#outlog').removeClass("text-success").addClass("text-danger");
+            $('#outlog').text('Click on Submit To Send Data To Server');
+            setOptionalIdsToGreen();
+            checkProcessingValues();
+        });
+
+        function setOptionalIdsToGreen(){
+            for (let i = 0; i < optionalIDs.length; i++){
+                let optionalID = optionalIDs[i];
+                $(`#${optionalID}`).removeClass('bg-danger').addClass('bg-success');
+            }
+        }
+    </script>
+  </body>
+</html>
