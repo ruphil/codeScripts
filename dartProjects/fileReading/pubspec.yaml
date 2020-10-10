@@ -1,0 +1,4 @@
+name: fileReading
+dependencies:
+  googleapis: any
+  googleapis_auth: any
