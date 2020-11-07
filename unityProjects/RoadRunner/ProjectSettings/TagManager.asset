@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags: []
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - 
+  - 
+  - Platform
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: Sky
+    uniqueID: 1448517701
+    locked: 0
+  - name: MountainBack
+    uniqueID: 3135509925
+    locked: 0
+  - name: MountainMiddle
+    uniqueID: 263041259
+    locked: 0
+  - name: MountainFront
+    uniqueID: 2712166595
+    locked: 0
+  - name: Path
+    uniqueID: 2649974875
+    locked: 0
+  - name: Character
+    uniqueID: 2110561805
+    locked: 0
+  - name: Coins
+    uniqueID: 1939450863
+    locked: 0
+  - name: Controls
+    uniqueID: 904511027
+    locked: 0

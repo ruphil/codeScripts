@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="100mm"
+   height="100mm"
+   viewBox="0 0 100 100"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   sodipodi:docname="CloseButton.svg"
+   inkscape:export-filename="C:\Users\RUBAN\Documents\GitHub\unityProjects\RoadRunner\Assets\Sprites\CloseButton.png"
+   inkscape:export-xdpi="200"
+   inkscape:export-ydpi="200">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="99.535761"
+     inkscape:cy="157.79534"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="986"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#ffffff;stroke:#fa5e04;stroke-width:6;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.99215698"
+       id="path853"
+       sodipodi:type="arc"
+       sodipodi:cx="50"
+       sodipodi:cy="50"
+       sodipodi:rx="37.041668"
+       sodipodi:ry="37.041668"
+       sodipodi:start="0"
+       sodipodi:end="6.2829584"
+       sodipodi:open="true"
+       sodipodi:arc-type="arc"
+       d="M 87.041668,50 A 37.041668,37.041668 0 0 1 50.002101,87.041668 37.041668,37.041668 0 0 1 12.958332,50.004203 37.041668,37.041668 0 0 1 49.993696,12.958333 37.041668,37.041668 0 0 1 87.041667,49.991595" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:20.1189;fill:#000000;fill-opacity:0;stroke:#fb5e04;stroke-width:1.60394914;stroke-opacity:0.99607843;stroke-miterlimit:4;stroke-dasharray:none"
+       x="43.65625"
+       y="51.026787"
+       id="text857"
+       transform="matrix(1.8703835,0,0,1.8703835,-49.747684,-26.250486)"><tspan
+         x="43.65625"
+         y="51.026787"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.2222px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:0;stroke:#fb5e04;stroke-width:1.60395;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.996078">X</tspan></tspan></text>
+  </g>
+</svg>
