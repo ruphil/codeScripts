@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Odd Even Pages</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <style>
+        .content {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div style="text-align: center;">
+            <button onclick="openOddPDF()" style="color: white; background-color: red; padding: 5px; font-size: 14px;">Select Odd Pages PDF</button>
+            <p id="oddPath"></p>
+        </div><br/>
+        
+        <div style="text-align: center;">
+            <button onclick="openEvenPDF()" style="color: white; background-color: green; padding: 5px; font-size: 14px;">Select Even Pages PDF</button>
+            <p id="evnPath"></p>
+        </div><br/>
+
+        <div style="text-align: center;">
+            <button onclick="selectTargetDir()" style="color: white; background-color: blue; padding: 5px; font-size: 14px;">Select Target Director</button><br/><br/>
+            <p id="targetDir" style="font-size:10px"></p>
+        </div><br/>
+
+        <div style="text-align: center;">
+            <button onclick="startWorking()" style="color: white; background-color: purple; padding: 5px; font-size: 14px;">Start Working</button>
+            <p id="status"></p>
+        </div>
+    </div>
+
+    <script>
+        const { dialog } = require('electron').remote;
+        const { PDFDocument } = require('pdf-lib');
+        const fs = require('fs');
+        const path = require("path");
+
+        let oddPdfPath = '';
+        let evenPdfPath = '';
+        let targetDir = '';
+
+        function openOddPDF(){
+            dialog.showOpenDialog({
+                properties: ['openFile']
+            }).then(res => {
+                oddPdfPath = res.filePaths[0];
+                document.getElementById('oddPath').innerText = path.basename(oddPdfPath);
+                console.log(oddPdfPath);
+            });
+        }
+
+        function openEvenPDF(){
+            dialog.showOpenDialog({
+                properties: ['openFile']
+            }).then(res => {
+                evenPdfPath = res.filePaths[0];
+                document.getElementById('evnPath').innerText = path.basename(evenPdfPath);
+                console.log(evenPdfPath);
+            });
+        }
+
+        function selectTargetDir(){
+            dialog.showOpenDialog({
+                properties: ['openDirectory']
+            }).then(res => {
+                targetDir = res.filePaths[0];
+                document.getElementById('targetDir').innerText = targetDir;
+                console.log(targetDir);
+            });
+        }
+
+        function startWorking(){
+            document.getElementById('status').innerText = 'Processing...';
+
+            startWorking();
+        }
+
+        async function startWorking(){
+            const pdfDoc = await PDFDocument.create();
+
+            const odd = await PDFDocument.load(fs.readFileSync(oddPdfPath));
+            const evn = await PDFDocument.load(fs.readFileSync(evenPdfPath));
+
+            const totalPgs = odd.getPages().length;
+
+            for (let i = 0; i < totalPgs; i++){
+                const [oddpage] = await pdfDoc.copyPages(odd, [i]);
+                pdfDoc.addPage(oddpage);
+
+                const [evnpage] = await pdfDoc.copyPages(evn, [i]);
+                pdfDoc.addPage(evnpage);
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            
+            fs.writeFileSync(targetDir + "/Out.pdf", pdfBytes);
+
+            document.getElementById('status').innerText = 'Completed...';
+        }
+    </script>
+</body>
+</html>
